@@ -1,0 +1,18 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+foundry.lock
+
+# Node / frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env
+frontend/.env.local
+
+# Editor
+.vscode/
+.idea/
+
+# macOS
+.DS_Store

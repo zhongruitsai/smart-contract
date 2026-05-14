@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./GovernanceToken.sol";
 
 /**
@@ -47,7 +47,6 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     error CandidateVotesMismatch(address candidate, uint256 provided, uint256 actual);
     error ZeroSeats();
     error ZeroAddress();
-    error KYCRequired(address candidate);
     error CandidateArrayInvalid();
 
     // ─── Events ───────────────────────────────────────────────────────────────
@@ -88,7 +87,7 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     /**
      * @param token_ Address of the deployed GovernanceToken contract.
      */
-    constructor(address token_) Ownable(msg.sender) {
+    constructor(address token_) {
         if (token_ == address(0)) revert ZeroAddress();
         token = GovernanceToken(token_);
     }
@@ -127,17 +126,10 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         emit ElectionCreated(electionId, meetingDate, seatCount, voteEnd, snapId);
     }
 
-    /**
-     * @notice Register a candidate for an election.
-     *         Candidate must have passed KYC on the token contract.
-     * @param electionId The election to register the candidate in.
-     * @param candidate  The address to nominate.
-     */
     function registerCandidate(uint256 electionId, address candidate) external onlyOwner {
         if (candidate == address(0)) revert ZeroAddress();
         Election storage e = _requireElection(electionId);
         if (e.finalized) revert ElectionAlreadyFinalized(electionId);
-        if (!token.kycApproved(candidate)) revert KYCRequired(candidate);
         if (e.isCandidateRegistered[candidate]) revert CandidateAlreadyRegistered(candidate, electionId);
 
         e.isCandidateRegistered[candidate] = true;
