@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
@@ -12,26 +12,31 @@ export function TokenMinter() {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
 
-  async function handleMint(e: React.FormEvent) {
+  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
+  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
+  useEffect(() => {
+    if (isSuccess) {
+      toast.success(`成功發行 ${amount} 股份給 ${recipient.slice(0, 6)}…${recipient.slice(-4)}`);
+      setAmount("");
+      setRecipient("");
+    }
+  }, [isSuccess]);
+
+  function handleMint(e: React.FormEvent) {
     e.preventDefault();
     if (!recipient.startsWith("0x") || !amount) {
       toast.error("請填入收款地址與數量");
       return;
     }
-    try {
-      writeContract({
-        address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
-        abi: GOVERNANCE_TOKEN_ABI,
-        functionName: "mint",
-        args: [recipient as `0x${string}`, parseUnits(amount, 18)],
-      });
-      toast.success("鑄幣交易已送出");
-    } catch (err) {
-      toast.error(extractRevertReason(err));
-    }
+    writeContract({
+      address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+      abi: GOVERNANCE_TOKEN_ABI,
+      functionName: "mint",
+      args: [recipient as `0x${string}`, parseUnits(amount, 18)],
+    });
   }
 
   const busy = isPending || isConfirming;

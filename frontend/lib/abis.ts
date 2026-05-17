@@ -134,7 +134,6 @@ export const DIRECTOR_ELECTION_ABI = [
   { type: "error", name: "CandidateVotesMismatch", inputs: [{ name: "candidate", type: "address", internalType: "address" }, { name: "provided", type: "uint256", internalType: "uint256" }, { name: "actual", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "ElectionAlreadyFinalized", inputs: [{ name: "electionId", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "ElectionNotFound", inputs: [{ name: "electionId", type: "uint256", internalType: "uint256" }] },
-  { type: "error", name: "KYCRequired", inputs: [{ name: "candidate", type: "address", internalType: "address" }] },
   { type: "error", name: "SortedArrayNotDescending", inputs: [{ name: "index", type: "uint256", internalType: "uint256" }, { name: "higher", type: "uint256", internalType: "uint256" }, { name: "lower", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "VoteEndInPast", inputs: [{ name: "voteEnd", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "VoteEndTooLate", inputs: [{ name: "voteEnd", type: "uint256", internalType: "uint256" }, { name: "limit", type: "uint256", internalType: "uint256" }] },

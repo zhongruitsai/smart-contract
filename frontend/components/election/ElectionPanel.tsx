@@ -11,7 +11,6 @@ import type { Election } from "@/types/governance";
 
 function ElectionCard({ id }: { id: bigint }) {
   const { address } = useAccount();
-  const [candidateInput, setCandidateInput] = useState("");
   const [voteInputs, setVoteInputs] = useState<Record<string, string>>({});
 
   const { data: electionRaw } = useReadContract({
@@ -19,6 +18,7 @@ function ElectionCard({ id }: { id: bigint }) {
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getElection",
     args: [id],
+    query: { refetchInterval: 3000 },
   });
 
   const { data: candidates } = useReadContract({
@@ -26,6 +26,7 @@ function ElectionCard({ id }: { id: bigint }) {
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getCandidates",
     args: [id],
+    query: { refetchInterval: 3000 },
   });
 
   const { data: hasVoted } = useReadContract({
@@ -33,6 +34,7 @@ function ElectionCard({ id }: { id: bigint }) {
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "hasVoted",
     args: [id, address ?? "0x0"],
+    query: { refetchInterval: 3000 },
   });
 
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
@@ -78,21 +80,21 @@ function ElectionCard({ id }: { id: bigint }) {
     <div className="border rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold text-sm">Election #{Number(id)}</p>
+          <p className="font-semibold text-sm">選舉 #{Number(id)}</p>
           <p className="text-xs text-muted-foreground">
-            {Number(election.seatCount)} seats · ends {formatTimestamp(election.voteEnd)}
+            {Number(election.seatCount)} 席次 · 截止：{formatTimestamp(election.voteEnd)}
           </p>
         </div>
-        {election.finalized && <span className="text-xs font-semibold text-green-600">Finalized</span>}
+        {election.finalized && <span className="text-xs font-semibold text-green-600">已結算</span>}
       </div>
 
       {candidateList.length === 0 && (
-        <p className="text-xs text-muted-foreground">No candidates registered yet.</p>
+        <p className="text-xs text-muted-foreground">尚無候選人。</p>
       )}
 
       {candidateList.length > 0 && votingOpen && !hasVoted && (
         <form onSubmit={castVotes} className="space-y-2">
-          <p className="text-xs text-muted-foreground">Allocate votes (token units per candidate):</p>
+          <p className="text-xs text-muted-foreground">分配票數（單位：股份代幣）：</p>
           {candidateList.map((c) => (
             <div key={c} className="flex items-center gap-2">
               <span className="text-xs font-mono flex-1">{formatAddress(c)}</span>
@@ -107,12 +109,12 @@ function ElectionCard({ id }: { id: bigint }) {
             </div>
           ))}
           <button type="submit" disabled={busy} className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50">
-            {busy ? "…" : "Cast Votes"}
+            {busy ? "送出中…" : "投票"}
           </button>
         </form>
       )}
 
-      {hasVoted && <p className="text-sm text-green-600">You have voted in this election.</p>}
+      {hasVoted && <p className="text-sm text-green-600">您已完成本次選舉投票。</p>}
     </div>
   );
 }
@@ -122,14 +124,15 @@ export function ElectionPanel() {
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "nextElectionId",
+    query: { refetchInterval: 3000 },
   });
 
   const count = nextId ? Number(nextId) : 0;
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">Director Elections</h3>
-      {count === 0 && <p className="text-sm text-muted-foreground">No elections created yet.</p>}
+      <h3 className="font-semibold">董事選舉</h3>
+      {count === 0 && <p className="text-sm text-muted-foreground">目前沒有進行中的選舉。</p>}
       {Array.from({ length: count }, (_, i) => (
         <ElectionCard key={i} id={BigInt(i)} />
       ))}

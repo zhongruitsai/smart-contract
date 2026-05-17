@@ -11,7 +11,7 @@ import { CosignList } from "./CosignList";
 import type { Proposal } from "@/types/governance";
 import { formatUnits } from "viem";
 
-const POLL_MS = 3000; // 每 3 秒自動重新讀取
+const POLL_MS = 3000;
 
 function useProposal(id: bigint) {
   return useReadContract({
@@ -33,11 +33,6 @@ function ProposalCard({ id }: { id: bigint }) {
     return <div className="border rounded-lg p-4 text-sm text-muted-foreground">載入中…</div>;
   }
 
-  // Struct order (attendedShares removed):
-  // 0:id 1:proposer 2:desc 3:pType 4:snapshotId 5:voteEnd 6:meetingDate
-  // 7:totalSupplyAtSnapshot 8:forVotes 9:againstVotes 10:abstainVotes
-  // 11:isCosignProposal 12:cosignDeadline 13:cosignerCount
-  // 14:isActive 15:votingStarted 16:finalized 17:result
   const raw = data as readonly unknown[];
   const proposal: Proposal = {
     id:                    raw[0]  as bigint,
@@ -66,17 +61,13 @@ function ProposalCard({ id }: { id: bigint }) {
   const canFinalize = proposal.votingStarted && !proposal.finalized && blockTs > proposal.voteEnd;
 
   function finalize() {
-    try {
-      writeContract({
-        address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-        abi: GOVERNANCE_VOTING_ABI,
-        functionName: "finalizeProposal",
-        args: [proposal.id],
-      });
-      toast.success("結算交易已送出");
-    } catch (err) {
-      toast.error(extractRevertReason(err));
-    }
+    writeContract({
+      address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+      abi: GOVERNANCE_VOTING_ABI,
+      functionName: "finalizeProposal",
+      args: [proposal.id],
+    });
+    toast.success("結算交易已送出");
   }
 
   const statusLabel =
@@ -176,10 +167,7 @@ export function ProposalList() {
         <h3 className="font-semibold text-sm text-muted-foreground">
           {isLoading ? "讀取中…" : `提案列表（共 ${count} 件）`}
         </h3>
-        <button
-          onClick={() => refetch()}
-          className="text-xs text-primary hover:underline"
-        >
+        <button onClick={() => refetch()} className="text-xs text-primary hover:underline">
           ↺ 重新整理
         </button>
       </div>

@@ -15,31 +15,17 @@ export function ProposalForm() {
 
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
-
   const busy = isPending || isConfirming;
 
+  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
+  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
   useEffect(() => {
-    if (writeError) toast.error(extractRevertReason(writeError));
-  }, [writeError]);
-
-  useEffect(() => {
-    if (receiptError) toast.error(extractRevertReason(receiptError));
-  }, [receiptError]);
-
-  useEffect(() => {
-    if (isSuccess) {
-      toast.success("提案已成功上鏈");
-      setDescription("");
-      setOpen(false);
-    }
+    if (isSuccess) { toast.success("提案已成功上鏈"); setDescription(""); setOpen(false); }
   }, [isSuccess]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!description.trim()) {
-      toast.error("請填寫提案內容");
-      return;
-    }
+    if (!description.trim()) { toast.error("請填寫提案內容"); return; }
     writeContract({
       address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
       abi: GOVERNANCE_VOTING_ABI,
@@ -50,10 +36,7 @@ export function ProposalForm() {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm"
-      >
+      <button onClick={() => setOpen(true)} className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm">
         ＋ 新增提案
       </button>
     );
@@ -71,31 +54,19 @@ export function ProposalForm() {
         className="w-full px-3 py-2 border rounded text-sm resize-none"
       />
       <div className="flex flex-wrap gap-4 items-center">
-        <select
-          value={pType}
-          onChange={(e) => setPType(Number(e.target.value))}
-          className="px-3 py-2 border rounded text-sm"
-        >
-          {PROPOSAL_TYPE_LABELS.map((label, i) => (
-            <option key={i} value={i}>{label}</option>
-          ))}
+        <select value={pType} onChange={(e) => setPType(Number(e.target.value))} className="px-3 py-2 border rounded text-sm">
+          {PROPOSAL_TYPE_LABELS.map((label, i) => <option key={i} value={i}>{label}</option>)}
         </select>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={isCosign} onChange={(e) => setIsCosign(e.target.checked)} />
-          聯署提案（需 10 位聯署人，集體持股 ≥ 1%）
+          聯署提案（需 10 位聯署人）
         </label>
       </div>
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
-        >
+        <button type="submit" disabled={busy} className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50">
           {busy ? "送出中…" : "送出"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 border rounded text-sm">
-          取消
-        </button>
+        <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 border rounded text-sm">取消</button>
       </div>
     </form>
   );

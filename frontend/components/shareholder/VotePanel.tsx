@@ -26,17 +26,9 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
   const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
   const busy = isPending || isConfirming;
 
-  useEffect(() => {
-    if (writeError) toast.error(extractRevertReason(writeError));
-  }, [writeError]);
-
-  useEffect(() => {
-    if (receiptError) toast.error(extractRevertReason(receiptError));
-  }, [receiptError]);
-
-  useEffect(() => {
-    if (isSuccess) toast.success("投票已成功上鏈");
-  }, [isSuccess]);
+  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
+  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
+  useEffect(() => { if (isSuccess) toast.success("投票已成功上鏈"); }, [isSuccess]);
 
   function vote(e: React.FormEvent) {
     e.preventDefault();

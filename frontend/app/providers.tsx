@@ -5,7 +5,6 @@ import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "@/lib/config";
 import { Toaster } from "sonner";
 import { useState } from "react";
-
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 

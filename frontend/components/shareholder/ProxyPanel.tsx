@@ -23,17 +23,9 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
   const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
   const busy = isPending || isConfirming;
 
-  useEffect(() => {
-    if (writeError) toast.error(extractRevertReason(writeError));
-  }, [writeError]);
-
-  useEffect(() => {
-    if (receiptError) toast.error(extractRevertReason(receiptError));
-  }, [receiptError]);
-
-  useEffect(() => {
-    if (isSuccess) toast.success("操作成功上鏈");
-  }, [isSuccess]);
+  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
+  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
+  useEffect(() => { if (isSuccess) toast.success("操作成功上鏈"); }, [isSuccess]);
 
   function grantProxy(e: React.FormEvent) {
     e.preventDefault();
@@ -63,12 +55,8 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
         <p className="text-xs text-muted-foreground">
           已委託：<span className="font-mono">{formatAddress(currentProxy as string)}</span>
         </p>
-        <button
-          onClick={revokeProxy}
-          disabled={busy}
-          className="px-3 py-1.5 border border-destructive text-destructive rounded text-sm disabled:opacity-50"
-        >
-          撤回委託
+        <button onClick={revokeProxy} disabled={busy} className="px-3 py-1.5 border border-destructive text-destructive rounded text-sm disabled:opacity-50">
+          {busy ? "…" : "撤回委託"}
         </button>
       </div>
     );
@@ -83,11 +71,7 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
         onChange={(e) => setProxyAddr(e.target.value)}
         className="flex-1 px-2 py-1.5 border rounded text-sm"
       />
-      <button
-        type="submit"
-        disabled={busy || !proxyAddr}
-        className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50"
-      >
+      <button type="submit" disabled={busy || !proxyAddr} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50">
         {busy ? "…" : "委託投票"}
       </button>
     </form>

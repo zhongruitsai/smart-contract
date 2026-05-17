@@ -31,7 +31,7 @@ export function Navbar() {
               onClick={() => connect({ connector: injected() })}
               className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              連接錢包
+              連接 MetaMask
             </button>
           )}
         </div>

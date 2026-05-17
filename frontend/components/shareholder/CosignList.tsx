@@ -25,17 +25,9 @@ export function CosignList({ proposal }: { proposal: Proposal }) {
   const cosignOpen = proposal.cosignDeadline > BigInt(0) && blockTs <= proposal.cosignDeadline;
   const busy = isPending || isConfirming;
 
-  useEffect(() => {
-    if (writeError) toast.error(extractRevertReason(writeError));
-  }, [writeError]);
-
-  useEffect(() => {
-    if (receiptError) toast.error(extractRevertReason(receiptError));
-  }, [receiptError]);
-
-  useEffect(() => {
-    if (isSuccess) toast.success("聯署成功上鏈");
-  }, [isSuccess]);
+  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
+  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
+  useEffect(() => { if (isSuccess) toast.success("聯署成功上鏈"); }, [isSuccess]);
 
   function cosign() {
     writeContract({
@@ -54,15 +46,11 @@ export function CosignList({ proposal }: { proposal: Proposal }) {
         聯署進度：{Number(proposal.cosignerCount)}/10 ｜ 截止：{formatTimestamp(proposal.cosignDeadline)}
       </p>
       {!proposal.isActive && cosignOpen && !alreadyCosigned && (
-        <button
-          onClick={cosign}
-          disabled={busy}
-          className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50"
-        >
+        <button onClick={cosign} disabled={busy} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50">
           {busy ? "送出中…" : "我要聯署"}
         </button>
       )}
-      {!proposal.isActive && !cosignOpen && !proposal.isActive && (
+      {!proposal.isActive && !cosignOpen && (
         <p className="text-xs text-red-500">聯署截止已過，提案未達門檻。</p>
       )}
       {alreadyCosigned && <p className="text-xs text-green-600">您已聯署此提案。</p>}
