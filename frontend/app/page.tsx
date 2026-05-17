@@ -15,6 +15,7 @@ export default function Home() {
     address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
     abi: GOVERNANCE_TOKEN_ABI,
     functionName: "owner",
+    chainId: 31337,
   });
 
   const isOwner = isConnected && address && owner && address.toLowerCase() === owner.toLowerCase();

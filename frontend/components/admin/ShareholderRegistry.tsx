@@ -26,11 +26,13 @@ export function ShareholderRegistry() {
         abi: GOVERNANCE_TOKEN_ABI,
         functionName: "balanceOf" as const,
         args: [s.address],
+        chainId: 31337,
       })),
       {
         address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
         abi: GOVERNANCE_TOKEN_ABI,
         functionName: "totalSupply" as const,
+        chainId: 31337,
       },
     ],
   });

@@ -12,9 +12,9 @@
  *   3. Copy the three addresses from Etherscan or the run output.
  */
 export const CONTRACT_ADDRESSES = {
-  GOVERNANCE_TOKEN: "0xA4899D35897033b927acFCf422bc745916139776" as `0x${string}`,
-  GOVERNANCE_VOTING: "0xf953b3A269d80e3eB0F2947630Da976B896A8C5b" as `0x${string}`,
-  DIRECTOR_ELECTION: "0xAA292E8611aDF267e563f334Ee42320aC96D0463" as `0x${string}`,
+  GOVERNANCE_TOKEN: "0x5FbDB2315678afecb367f032d93F642f64180aa3" as `0x${string}`,
+  GOVERNANCE_VOTING: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as `0x${string}`,
+  DIRECTOR_ELECTION: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0" as `0x${string}`,
 } as const;
 
 import { http, createConfig } from "wagmi";

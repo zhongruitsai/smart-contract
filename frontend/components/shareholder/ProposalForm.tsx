@@ -1,37 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useState } from "react";
 import { toast } from "sonner";
+import { useDevAccount } from "@/contexts/DevAccountContext";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason, PROPOSAL_TYPE_LABELS } from "@/lib/utils";
 
 export function ProposalForm() {
+  const { writeContract, isPending } = useDevAccount();
   const [description, setDescription] = useState("");
   const [pType, setPType] = useState<number>(0);
   const [isCosign, setIsCosign] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
-  const busy = isPending || isConfirming;
-
-  useEffect(() => { if (writeError) toast.error(extractRevertReason(writeError)); }, [writeError]);
-  useEffect(() => { if (receiptError) toast.error(extractRevertReason(receiptError)); }, [receiptError]);
-  useEffect(() => {
-    if (isSuccess) { toast.success("提案已成功上鏈"); setDescription(""); setOpen(false); }
-  }, [isSuccess]);
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!description.trim()) { toast.error("請填寫提案內容"); return; }
-    writeContract({
-      address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-      abi: GOVERNANCE_VOTING_ABI,
-      functionName: isCosign ? "createCosignProposal" : "createProposal",
-      args: [description, pType],
-    });
+    try {
+      await writeContract({
+        address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+        abi: GOVERNANCE_VOTING_ABI,
+        functionName: isCosign ? "createCosignProposal" : "createProposal",
+        args: [description, pType],
+      });
+      toast.success("提案已成功上鏈");
+      setDescription("");
+      setOpen(false);
+    } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
   if (!open) {
@@ -63,8 +59,8 @@ export function ProposalForm() {
         </label>
       </div>
       <div className="flex gap-2">
-        <button type="submit" disabled={busy} className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50">
-          {busy ? "送出中…" : "送出"}
+        <button type="submit" disabled={isPending} className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50">
+          {isPending ? "送出中…" : "送出"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 border rounded text-sm">取消</button>
       </div>

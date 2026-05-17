@@ -1,7 +1,8 @@
 "use client";
 
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useBlock } from "wagmi";
+import { useReadContract, useBlock } from "wagmi";
 import { toast } from "sonner";
+import { useDevAccount } from "@/contexts/DevAccountContext";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { PROPOSAL_TYPE_LABELS, VOTE_RESULT_LABELS, formatTimestamp, extractRevertReason } from "@/lib/utils";
@@ -19,15 +20,15 @@ function useProposal(id: bigint) {
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "proposals",
     args: [id],
+    chainId: 31337,
     query: { refetchInterval: POLL_MS },
   });
 }
 
 function ProposalCard({ id }: { id: bigint }) {
+  const { writeContract, isPending } = useDevAccount();
   const { data, isLoading } = useProposal(id);
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
-  const { data: block } = useBlock({ watch: true, query: { refetchInterval: 3000 } });
+  const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
 
   if (isLoading || !data) {
     return <div className="border rounded-lg p-4 text-sm text-muted-foreground">載入中…</div>;
@@ -55,19 +56,15 @@ function ProposalCard({ id }: { id: bigint }) {
     result:                raw[17] as number,
   };
 
-  const busy = isPending || isConfirming;
   const blockTs = block?.timestamp ?? BigInt(Math.floor(Date.now() / 1000));
   const votingOpen = proposal.votingStarted && !proposal.finalized && blockTs <= proposal.voteEnd;
   const canFinalize = proposal.votingStarted && !proposal.finalized && blockTs > proposal.voteEnd;
 
-  function finalize() {
-    writeContract({
-      address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-      abi: GOVERNANCE_VOTING_ABI,
-      functionName: "finalizeProposal",
-      args: [proposal.id],
-    });
-    toast.success("結算交易已送出");
+  async function finalize() {
+    try {
+      await writeContract({ address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "finalizeProposal", args: [proposal.id] });
+      toast.success("結算交易已送出");
+    } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
   const statusLabel =
@@ -85,9 +82,7 @@ function ProposalCard({ id }: { id: bigint }) {
     votingOpen                                  ? "bg-blue-100 text-blue-700" :
     "bg-yellow-100 text-yellow-700";
 
-  const supplyF = proposal.totalSupplyAtSnapshot > BigInt(0)
-    ? formatUnits(proposal.totalSupplyAtSnapshot, 18)
-    : "—";
+  const supplyF = proposal.totalSupplyAtSnapshot > BigInt(0) ? formatUnits(proposal.totalSupplyAtSnapshot, 18) : "—";
 
   return (
     <div className="border rounded-lg p-4 space-y-3">
@@ -98,53 +93,30 @@ function ProposalCard({ id }: { id: bigint }) {
             <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{PROPOSAL_TYPE_LABELS[proposal.pType]}</span>
           </div>
           <p className="text-sm mt-1 break-words">{proposal.description || "(無描述)"}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-            提案人：{proposal.proposer.slice(0,6)}…{proposal.proposer.slice(-4)}
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 font-mono">提案人：{proposal.proposer.slice(0,6)}…{proposal.proposer.slice(-4)}</p>
         </div>
-        <span className={`text-xs font-semibold shrink-0 px-2 py-1 rounded ${statusColor}`}>
-          {statusLabel}
-        </span>
+        <span className={`text-xs font-semibold shrink-0 px-2 py-1 rounded ${statusColor}`}>{statusLabel}</span>
       </div>
-
       {proposal.votingStarted && (
         <>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="bg-green-50 rounded p-2 text-center">
-              <p className="text-muted-foreground">贊成</p>
-              <p className="font-semibold text-green-700">{formatUnits(proposal.forVotes, 18)}</p>
-            </div>
-            <div className="bg-red-50 rounded p-2 text-center">
-              <p className="text-muted-foreground">反對</p>
-              <p className="font-semibold text-red-600">{formatUnits(proposal.againstVotes, 18)}</p>
-            </div>
-            <div className="bg-gray-50 rounded p-2 text-center">
-              <p className="text-muted-foreground">棄權</p>
-              <p className="font-semibold">{formatUnits(proposal.abstainVotes, 18)}</p>
-            </div>
+            <div className="bg-green-50 rounded p-2 text-center"><p className="text-muted-foreground">贊成</p><p className="font-semibold text-green-700">{formatUnits(proposal.forVotes, 18)}</p></div>
+            <div className="bg-red-50 rounded p-2 text-center"><p className="text-muted-foreground">反對</p><p className="font-semibold text-red-600">{formatUnits(proposal.againstVotes, 18)}</p></div>
+            <div className="bg-gray-50 rounded p-2 text-center"><p className="text-muted-foreground">棄權</p><p className="font-semibold">{formatUnits(proposal.abstainVotes, 18)}</p></div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            快照總股份：{supplyF} ｜ 投票截止：{formatTimestamp(proposal.voteEnd)}
-          </p>
+          <p className="text-xs text-muted-foreground">快照總股份：{supplyF} ｜ 投票截止：{formatTimestamp(proposal.voteEnd)}</p>
         </>
       )}
-
       {proposal.isCosignProposal && <CosignList proposal={proposal} />}
-
       {votingOpen && proposal.isActive && (
         <div className="space-y-2 border-t pt-2">
           <VotePanel proposal={proposal} />
           <ProxyPanel proposal={proposal} />
         </div>
       )}
-
       {canFinalize && (
-        <button
-          onClick={finalize}
-          disabled={busy}
-          className="w-full py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50"
-        >
-          {busy ? "處理中…" : "結算提案"}
+        <button onClick={finalize} disabled={isPending} className="w-full py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50">
+          {isPending ? "處理中…" : "結算提案"}
         </button>
       )}
     </div>
@@ -156,6 +128,7 @@ export function ProposalList() {
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "nextProposalId",
+    chainId: 31337,
     query: { refetchInterval: POLL_MS },
   });
 
@@ -167,21 +140,15 @@ export function ProposalList() {
         <h3 className="font-semibold text-sm text-muted-foreground">
           {isLoading ? "讀取中…" : `提案列表（共 ${count} 件）`}
         </h3>
-        <button onClick={() => refetch()} className="text-xs text-primary hover:underline">
-          ↺ 重新整理
-        </button>
+        <button onClick={() => refetch()} className="text-xs text-primary hover:underline">↺ 重新整理</button>
       </div>
-
       {count === 0 && !isLoading && (
         <p className="text-sm text-muted-foreground">
           目前沒有任何提案。<br/>
           <span className="text-xs">（若剛提交提案，請稍候 3 秒後自動更新，或點「重新整理」）</span>
         </p>
       )}
-
-      {Array.from({ length: count }, (_, i) => (
-        <ProposalCard key={i} id={BigInt(i)} />
-      ))}
+      {Array.from({ length: count }, (_, i) => <ProposalCard key={i} id={BigInt(i)} />)}
     </div>
   );
 }

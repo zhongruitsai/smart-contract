@@ -30,7 +30,7 @@ const PRESETS = [
 ];
 
 export function TimeController() {
-  const { data: block, refetch } = useBlock({ watch: false });
+  const { data: block, refetch } = useBlock({ watch: false, chainId: 31337 });
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState(false);
 
