@@ -277,7 +277,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
         emit VoteCast(proposalId, msg.sender, forVotes, againstVotes, abstainVotes);
     }
 
-    function finalizeProposal(uint256 proposalId) external nonReentrant {
+    function finalizeProposal(uint256 proposalId) external onlyOwner nonReentrant {
         Proposal storage p = _requireProposal(proposalId);
         if (block.timestamp <= p.voteEnd) revert VotingEnded(proposalId);
         if (p.finalized) revert ProposalAlreadyFinalized(proposalId);

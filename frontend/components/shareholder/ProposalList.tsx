@@ -2,7 +2,7 @@
 
 import { useReadContract, useBlock } from "wagmi";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
+import { useDevAccount, ANVIL_ACCOUNTS } from "@/contexts/DevAccountContext";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { PROPOSAL_TYPE_LABELS, VOTE_RESULT_LABELS, formatTimestamp, extractRevertReason } from "@/lib/utils";
@@ -26,7 +26,8 @@ function useProposal(id: bigint) {
 }
 
 function ProposalCard({ id }: { id: bigint }) {
-  const { writeContract, isPending } = useDevAccount();
+  const { writeContract, isPending, address } = useDevAccount();
+  const isAdmin = address === ANVIL_ACCOUNTS[0].address;
   const { data, isLoading } = useProposal(id);
   const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
 
@@ -114,7 +115,7 @@ function ProposalCard({ id }: { id: bigint }) {
           <ProxyPanel proposal={proposal} />
         </div>
       )}
-      {canFinalize && (
+      {canFinalize && isAdmin && (
         <button onClick={finalize} disabled={isPending} className="w-full py-1.5 bg-secondary text-secondary-foreground rounded text-sm disabled:opacity-50">
           {isPending ? "處理中…" : "結算提案"}
         </button>

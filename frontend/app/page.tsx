@@ -7,9 +7,12 @@ import { TimeController } from "@/components/TimeController";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { formatAddress } from "@/lib/utils";
+import { useDevAccount, ANVIL_ACCOUNTS } from "@/contexts/DevAccountContext";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
+  const { address: devAddress } = useDevAccount();
+  const isDevAdmin = devAddress === ANVIL_ACCOUNTS[0].address;
 
   const { data: owner } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
@@ -41,7 +44,7 @@ export default function Home() {
         </div>
       </div>
 
-      <TimeController />
+      {isDevAdmin && <TimeController />}
 
       {isOwner && <AdminDashboard />}
       <ShareholderPortal />
