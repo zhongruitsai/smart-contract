@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useReadContracts, useBlock } from "wagmi";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 
@@ -144,9 +144,8 @@ function Step2Card({ nextProposalId, busy, onClose }: { nextProposalId: bigint |
   const count = nextProposalId ? Number(nextProposalId) : 0;
   return (
     <div className="space-y-3">
-      <InfoBox>投票期間，股東可在各提案卡片上進行投票或委託。投票截止後，任何人可點擊提案卡片上的「結算提案」按鈕完成計票。所有提案結算完畢後，關閉本次會議。</InfoBox>
+      <InfoBox>投票期間，股東可在各提案卡片上進行投票或委託。投票截止後，管理員可點擊提案卡片上的「結算提案」按鈕完成計票。所有提案結算完畢後，關閉本次會議。</InfoBox>
       <Stat label="進行中提案" value={`${count} 件`} />
-      <p className="text-xs text-blue-600 bg-blue-50 rounded p-2">ℹ 股東頁面的提案列表中，投票截止後會出現「結算提案」按鈕。</p>
       <button disabled={busy} onClick={onClose} className="w-full py-1.5 border border-red-300 text-red-500 rounded text-sm hover:bg-red-50 disabled:opacity-40 transition-colors">
         關閉本次會議
       </button>
@@ -185,19 +184,19 @@ function ActionButton({ children, disabled, onClick }: { children: React.ReactNo
 }
 
 export function PhaseController() {
-  const { writeContract, isPending } = useDevAccount();
+  const { writeContract, isPending } = useContractWrite();
 
-  const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
+  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
   const blockTimestamp = block?.timestamp ?? BigInt(0);
 
   const { data, refetch } = useReadContracts({
     query: { refetchInterval: 3000 },
     contracts: [
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentPhase", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "proposingDeadline", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "votingStartDeadline", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "nextProposalId", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentMeetingDate", chainId: 31337 },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentPhase", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "proposingDeadline", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "votingStartDeadline", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "nextProposalId", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentMeetingDate", chainId: CHAIN_ID },
     ],
   });
 

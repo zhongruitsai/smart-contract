@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useReadContract } from "wagmi";
+import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 import type { Proposal } from "@/types/governance";
 
 export function VotePanel({ proposal }: { proposal: Proposal }) {
-  const { address, writeContract, isPending } = useDevAccount();
+  const { address } = useAccount();
+  const { writeContract, isPending } = useContractWrite();
   const [forV, setForV] = useState("");
   const [againstV, setAgainstV] = useState("");
   const [abstainV, setAbstainV] = useState("");
@@ -20,8 +22,8 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "hasVoted",
-    args: [proposal.id, address],
-    chainId: 31337,
+    args: [proposal.id, address ?? "0x0000000000000000000000000000000000000000"],
+    chainId: CHAIN_ID,
   });
 
   async function vote(e: React.FormEvent) {

@@ -4,24 +4,22 @@ import { useAccount, useReadContract } from "wagmi";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { ShareholderPortal } from "@/components/shareholder/ShareholderPortal";
 import { TimeController } from "@/components/TimeController";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { formatAddress } from "@/lib/utils";
-import { useDevAccount, ANVIL_ACCOUNTS } from "@/contexts/DevAccountContext";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { address: devAddress } = useDevAccount();
-  const isDevAdmin = devAddress === ANVIL_ACCOUNTS[0].address;
 
   const { data: owner } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
     abi: GOVERNANCE_TOKEN_ABI,
     functionName: "owner",
-    chainId: 31337,
+    chainId: CHAIN_ID,
   });
 
-  const isOwner = isConnected && address && owner && address.toLowerCase() === owner.toLowerCase();
+  const isOwner = isConnected && address && owner &&
+    address.toLowerCase() === (owner as string).toLowerCase();
 
   if (!isConnected) {
     return (
@@ -44,7 +42,7 @@ export default function Home() {
         </div>
       </div>
 
-      {isDevAdmin && <TimeController />}
+      {isOwner && <TimeController />}
 
       {isOwner && <AdminDashboard />}
       <ShareholderPortal />

@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useReadContract, useBlock } from "wagmi";
+import { useReadContract, useBlock, useAccount } from "wagmi";
 import { toast } from "sonner";
 import { parseUnits } from "viem";
-import { useDevAccount } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp, formatAddress } from "@/lib/utils";
 import type { Election } from "@/types/governance";
 
 function ElectionCard({ id }: { id: bigint }) {
-  const { address, writeContract, isPending } = useDevAccount();
+  const { address } = useAccount();
+  const { writeContract, isPending } = useContractWrite();
   const [voteInputs, setVoteInputs] = useState<Record<string, string>>({});
 
   const { data: electionRaw } = useReadContract({
@@ -19,7 +20,7 @@ function ElectionCard({ id }: { id: bigint }) {
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getElection",
     args: [id],
-    chainId: 31337,
+    chainId: CHAIN_ID,
     query: { refetchInterval: 3000 },
   });
 
@@ -28,7 +29,7 @@ function ElectionCard({ id }: { id: bigint }) {
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getCandidates",
     args: [id],
-    chainId: 31337,
+    chainId: CHAIN_ID,
     query: { refetchInterval: 3000 },
   });
 
@@ -36,12 +37,12 @@ function ElectionCard({ id }: { id: bigint }) {
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "hasVoted",
-    args: [id, address],
-    chainId: 31337,
+    args: [id, address ?? "0x0000000000000000000000000000000000000000"],
+    chainId: CHAIN_ID,
     query: { refetchInterval: 3000 },
   });
 
-  const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
+  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
 
   if (!electionRaw) return null;
 
@@ -105,7 +106,7 @@ export function ElectionPanel() {
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "nextElectionId",
-    chainId: 31337,
+    chainId: CHAIN_ID,
     query: { refetchInterval: 3000 },
   });
 

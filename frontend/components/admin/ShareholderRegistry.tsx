@@ -1,7 +1,7 @@
 "use client";
 
 import { useReadContracts } from "wagmi";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { formatUnits } from "viem";
 
@@ -26,13 +26,13 @@ export function ShareholderRegistry() {
         abi: GOVERNANCE_TOKEN_ABI,
         functionName: "balanceOf" as const,
         args: [s.address],
-        chainId: 31337,
+        chainId: CHAIN_ID,
       })),
       {
         address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
         abi: GOVERNANCE_TOKEN_ABI,
         functionName: "totalSupply" as const,
-        chainId: 31337,
+        chainId: CHAIN_ID,
       },
     ],
   });

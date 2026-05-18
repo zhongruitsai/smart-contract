@@ -1,10 +1,10 @@
 "use client";
 
-import { useReadContract, useBlock } from "wagmi";
+import { useReadContract, useBlock, useAccount } from "wagmi";
 import { toast } from "sonner";
-import { useDevAccount, ANVIL_ACCOUNTS } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
-import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
+import { GOVERNANCE_VOTING_ABI, GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { PROPOSAL_TYPE_LABELS, VOTE_RESULT_LABELS, formatTimestamp, extractRevertReason } from "@/lib/utils";
 import { VotePanel } from "./VotePanel";
 import { ProxyPanel } from "./ProxyPanel";
@@ -20,16 +20,15 @@ function useProposal(id: bigint) {
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "proposals",
     args: [id],
-    chainId: 31337,
+    chainId: CHAIN_ID,
     query: { refetchInterval: POLL_MS },
   });
 }
 
-function ProposalCard({ id }: { id: bigint }) {
-  const { writeContract, isPending, address } = useDevAccount();
-  const isAdmin = address === ANVIL_ACCOUNTS[0].address;
+function ProposalCard({ id, isAdmin }: { id: bigint; isAdmin: boolean }) {
+  const { writeContract, isPending } = useContractWrite();
   const { data, isLoading } = useProposal(id);
-  const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
+  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
 
   if (isLoading || !data) {
     return <div className="border rounded-lg p-4 text-sm text-muted-foreground">載入中…</div>;
@@ -125,11 +124,21 @@ function ProposalCard({ id }: { id: bigint }) {
 }
 
 export function ProposalList() {
+  const { address } = useAccount();
+
+  const { data: owner } = useReadContract({
+    address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+    abi: GOVERNANCE_TOKEN_ABI,
+    functionName: "owner",
+    chainId: CHAIN_ID,
+  });
+  const isAdmin = !!(address && owner && address.toLowerCase() === (owner as string).toLowerCase());
+
   const { data: nextId, refetch, isLoading } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "nextProposalId",
-    chainId: 31337,
+    chainId: CHAIN_ID,
     query: { refetchInterval: POLL_MS },
   });
 
@@ -149,7 +158,7 @@ export function ProposalList() {
           <span className="text-xs">（若剛提交提案，請稍候 3 秒後自動更新，或點「重新整理」）</span>
         </p>
       )}
-      {Array.from({ length: count }, (_, i) => <ProposalCard key={i} id={BigInt(i)} />)}
+      {Array.from({ length: count }, (_, i) => <ProposalCard key={i} id={BigInt(i)} isAdmin={isAdmin} />)}
     </div>
   );
 }

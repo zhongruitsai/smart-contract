@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
+import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 
 export function TokenMinter() {
-  const { writeContract, isPending } = useDevAccount();
+  const { writeContract, isPending } = useContractWrite();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
 

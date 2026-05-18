@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
+import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason, PROPOSAL_TYPE_LABELS } from "@/lib/utils";
 
 export function ProposalForm() {
-  const { writeContract, isPending } = useDevAccount();
+  const { writeContract, isPending } = useContractWrite();
   const [description, setDescription] = useState("");
   const [pType, setPType] = useState<number>(0);
   const [isCosign, setIsCosign] = useState(false);

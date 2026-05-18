@@ -1,22 +1,22 @@
 "use client";
 
 import { useReadContracts } from "wagmi";
-import { useDevAccount } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { useAccount } from "wagmi";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI, GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { PHASE_LABELS } from "@/lib/utils";
 import { formatUnits } from "viem";
 
 export function StatusCard() {
-  const { address } = useDevAccount();
+  const { address } = useAccount();
 
   const { data } = useReadContracts({
     query: { refetchInterval: 3000 },
     contracts: [
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "balanceOf", args: [address], chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "totalSupply", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentPhase", chainId: 31337 },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "nextProposalId", chainId: 31337 },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "balanceOf", args: [address ?? "0x0000000000000000000000000000000000000000"], chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "totalSupply", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentPhase", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "nextProposalId", chainId: CHAIN_ID },
     ],
   });
 

@@ -1,25 +1,27 @@
 "use client";
 
 import { useReadContract, useBlock } from "wagmi";
+import { useAccount } from "wagmi";
 import { toast } from "sonner";
-import { useDevAccount } from "@/contexts/DevAccountContext";
-import { CONTRACT_ADDRESSES } from "@/lib/config";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp } from "@/lib/utils";
 import type { Proposal } from "@/types/governance";
 
 export function CosignList({ proposal }: { proposal: Proposal }) {
-  const { address, writeContract, isPending } = useDevAccount();
+  const { address } = useAccount();
+  const { writeContract, isPending } = useContractWrite();
 
   const { data: alreadyCosigned } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "hasCosigned",
-    args: [proposal.id, address],
-    chainId: 31337,
+    args: [proposal.id, address ?? "0x0000000000000000000000000000000000000000"],
+    chainId: CHAIN_ID,
   });
 
-  const { data: block } = useBlock({ watch: true, chainId: 31337, query: { refetchInterval: 3000 } });
+  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
   const blockTs = block?.timestamp ?? BigInt(Math.floor(Date.now() / 1000));
   const cosignOpen = proposal.cosignDeadline > BigInt(0) && blockTs <= proposal.cosignDeadline;
 
