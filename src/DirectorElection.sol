@@ -82,6 +82,13 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     uint256 public nextElectionId;
     mapping(uint256 => Election) private _elections;
 
+    /// @notice Admin-controlled time offset for demo/testing purposes.
+    uint256 public timeOffset;
+
+    function _now() internal view returns (uint256) { return _now() + timeOffset; }
+    function currentTime() external view returns (uint256) { return _now() + timeOffset; }
+    function addTimeOffset(uint256 secs) external onlyOwner { timeOffset += secs; }
+
     // ─── Constructor ──────────────────────────────────────────────────────────
 
     /**
@@ -111,7 +118,7 @@ contract DirectorElection is Ownable, ReentrancyGuard {
 
         uint256 limit = meetingDate - 2 days;
         if (voteEnd > limit) revert VoteEndTooLate(voteEnd, limit);
-        if (voteEnd <= block.timestamp) revert VoteEndInPast(voteEnd);
+        if (voteEnd <= _now()) revert VoteEndInPast(voteEnd);
 
         uint256 snapId = token.takeSnapshot();
 
@@ -157,7 +164,7 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         if (candidates_.length == 0) revert CandidateArrayInvalid();
 
         Election storage e = _requireElection(electionId);
-        if (block.timestamp > e.voteEnd) revert VotingEnded(electionId);
+        if (_now() > e.voteEnd) revert VotingEnded(electionId);
         if (e.hasVoted[msg.sender]) revert AlreadyVoted(msg.sender);
 
         uint256 snapBal = token.balanceOfAt(msg.sender, e.snapshotId);
@@ -202,7 +209,7 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         if (sortedCandidates.length != sortedVotes.length) revert ArrayLengthMismatch();
 
         Election storage e = _requireElection(electionId);
-        if (block.timestamp <= e.voteEnd) revert VotingNotOpen(electionId);
+        if (_now() <= e.voteEnd) revert VotingNotOpen(electionId);
         if (e.finalized) revert ElectionAlreadyFinalized(electionId);
 
         // Verify all candidates in the sorted list are registered and the full list is provided

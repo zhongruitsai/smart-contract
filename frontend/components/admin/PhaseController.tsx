@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useReadContracts, useBlock } from "wagmi";
+import { useReadContracts } from "wagmi";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
@@ -66,6 +66,7 @@ function Step0Card({ busy, onSubmit }: {
         開放股東提案前，須先設定本次股東會日期。系統將自動計算
         <strong className="text-blue-700"> 提案截止日</strong>（會議前 {minNotice + 10} 天）
         與<strong className="text-blue-700"> 最晚開投日</strong>（會議前 {minNotice} 天）。
+        設定完成後，可使用上方時間控制器快轉時間。
       </InfoBox>
       <label className="block text-xs font-medium text-gray-600">股東會日期</label>
       <input type="datetime-local" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
@@ -86,19 +87,27 @@ function Step0Card({ busy, onSubmit }: {
   );
 }
 
-function Step1Card({ pDeadline, vDeadline, nextProposalId, blockTimestamp, busy, onStartVoting, onClose }: {
+function Step1Card({ pDeadline, vDeadline, nextProposalId, blockTimestamp, busy, isLocal, onStartVoting, onClose }: {
   pDeadline: bigint | undefined;
   vDeadline: bigint | undefined;
   nextProposalId: bigint | undefined;
   blockTimestamp: bigint;
   busy: boolean;
+  isLocal: boolean;
   onStartVoting: (id: string, voteEnd: string) => void;
   onClose: () => void;
 }) {
   const [proposalId, setProposalId] = useState("0");
-  const [voteEnd, setVoteEnd] = useState(defaultDatetime(35));
+  const [voteEnd, setVoteEnd] = useState(isLocal ? defaultDatetime(35) : defaultDatetime(1));
   const proposingOver = pDeadline ? blockTimestamp > pDeadline : false;
   const count = nextProposalId ? Number(nextProposalId) : 0;
+
+  const remainingSecs = pDeadline && !proposingOver
+    ? Math.max(0, Number(pDeadline) - Number(blockTimestamp))
+    : 0;
+  const remainingStr = remainingSecs > 0
+    ? `${Math.floor(remainingSecs / 3600) > 0 ? Math.floor(remainingSecs / 3600) + " 時 " : ""}${Math.floor((remainingSecs % 3600) / 60)} 分 ${remainingSecs % 60} 秒`
+    : "";
 
   return (
     <div className="space-y-3">
@@ -109,8 +118,11 @@ function Step1Card({ pDeadline, vDeadline, nextProposalId, blockTimestamp, busy,
         <Stat label="目前提案數" value={`${count} 件`} />
         <Stat label="提案期狀態" value={proposingOver ? "已截止 ✓" : "進行中…"} highlight={proposingOver} />
       </div>
-      {!proposingOver && (
-        <p className="text-xs text-amber-600 bg-amber-50 rounded p-2">⚠ 提案期尚未截止，請使用底部時間控制器快轉至截止日後，再開放投票。</p>
+      {!proposingOver && remainingStr && (
+        <p className="text-xs text-amber-600 bg-amber-50 rounded p-2">
+          ⏳ 提案期尚未截止，還需等待 <strong>{remainingStr}</strong> 後才能開放投票。
+          {isLocal && " 可使用底部時間控制器快轉。"}
+        </p>
       )}
       {proposingOver && count === 0 && (
         <p className="text-xs text-gray-500 bg-gray-50 rounded p-2">目前沒有提案，可直接關閉本次會議。</p>
@@ -186,9 +198,6 @@ function ActionButton({ children, disabled, onClick }: { children: React.ReactNo
 export function PhaseController() {
   const { writeContract, isPending } = useContractWrite();
 
-  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
-  const blockTimestamp = block?.timestamp ?? BigInt(0);
-
   const { data, refetch } = useReadContracts({
     query: { refetchInterval: 3000 },
     contracts: [
@@ -197,6 +206,7 @@ export function PhaseController() {
       { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "votingStartDeadline", chainId: CHAIN_ID },
       { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "nextProposalId", chainId: CHAIN_ID },
       { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentMeetingDate", chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "currentTime", chainId: CHAIN_ID },
     ],
   });
 
@@ -205,6 +215,7 @@ export function PhaseController() {
   const vDeadline      = data?.[2]?.result as bigint | undefined;
   const nextProposalId = data?.[3]?.result as bigint | undefined;
   const meetingDate    = data?.[4]?.result as bigint | undefined;
+  const blockTimestamp = (data?.[5]?.result as bigint | undefined) ?? BigInt(Math.floor(Date.now() / 1000));
 
   async function openPhase(meetingDateStr: string, isPublic: boolean, isExtraordinary: boolean) {
     try {
@@ -248,7 +259,7 @@ export function PhaseController() {
       </div>
       <div className="border border-blue-100 rounded-lg p-4 bg-blue-50/30 space-y-3">
         {(phase === 0 || phase === 3) && <Step0Card busy={isPending} onSubmit={openPhase} />}
-        {phase === 1 && <Step1Card pDeadline={pDeadline} vDeadline={vDeadline} nextProposalId={nextProposalId} blockTimestamp={blockTimestamp} busy={isPending} onStartVoting={startVoting} onClose={closePhase} />}
+        {phase === 1 && <Step1Card pDeadline={pDeadline} vDeadline={vDeadline} nextProposalId={nextProposalId} blockTimestamp={blockTimestamp} busy={isPending} isLocal={false} onStartVoting={startVoting} onClose={closePhase} />}
         {phase === 2 && <Step2Card nextProposalId={nextProposalId} busy={isPending} onClose={closePhase} />}
         {phase === 3 && <Step3Card busy={isPending} onReopen={() => openPhase(defaultDatetime(45), false, false)} />}
       </div>

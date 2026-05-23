@@ -104,6 +104,9 @@ export const GOVERNANCE_VOTING_ABI = [
   { type: "error", name: "VotingNotStarted", inputs: [{ name: "proposalId", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "VotingStartTooLate", inputs: [{ name: "deadline", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "ZeroAddress", inputs: [] },
+  { type: "function", name: "addTimeOffset", inputs: [{ name: "secs", type: "uint256", internalType: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "currentTime", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "timeOffset", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
 ] as const;
 
 export const DIRECTOR_ELECTION_ABI = [
@@ -142,4 +145,7 @@ export const DIRECTOR_ELECTION_ABI = [
   { type: "error", name: "VotingNotOpen", inputs: [{ name: "electionId", type: "uint256", internalType: "uint256" }] },
   { type: "error", name: "ZeroAddress", inputs: [] },
   { type: "error", name: "ZeroSeats", inputs: [] },
+  { type: "function", name: "addTimeOffset", inputs: [{ name: "secs", type: "uint256", internalType: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "currentTime", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "timeOffset", inputs: [], outputs: [{ name: "", type: "uint256", internalType: "uint256" }], stateMutability: "view" },
 ] as const;

@@ -115,6 +115,13 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
     /// @notice startVoting must be called on or before this timestamp.
     uint256 public votingStartDeadline;
 
+    /// @notice Admin-controlled time offset for demo/testing purposes.
+    uint256 public timeOffset;
+
+    function _now() internal view returns (uint256) { return _now() + timeOffset; }
+    function currentTime() external view returns (uint256) { return _now() + timeOffset; }
+    function addTimeOffset(uint256 secs) external onlyOwner { timeOffset += secs; }
+
     mapping(uint256 => Proposal) public proposals;
     mapping(address => mapping(uint256 => bool)) public hasProposedAtMeeting;
     mapping(uint256 => mapping(address => bool)) public hasVoted;
@@ -149,7 +156,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
 
         uint256 vDeadline = _calcVotingStartDeadline(meetingDate, _isPublicCompany, _isExtraordinary);
         uint256 pDeadline = vDeadline - 10 days;
-        if (block.timestamp >= pDeadline) revert MeetingTooSoon(block.timestamp, pDeadline);
+        if (_now() >= pDeadline) revert MeetingTooSoon(_now(), pDeadline);
 
         currentMeetingDate   = meetingDate;
         isPublicCompany      = _isPublicCompany;
@@ -169,7 +176,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
      */
     function startVoting(uint256 proposalId, uint256 voteEnd) external onlyOwner {
         if (currentPhase != Phase.Proposing && currentPhase != Phase.Voting) revert InvalidPhase(currentPhase);
-        if (block.timestamp < proposingDeadline) revert ProposingStillOpen(proposingDeadline);
+        if (_now() < proposingDeadline) revert ProposingStillOpen(proposingDeadline);
 
         Proposal storage p = _requireProposal(proposalId);
         if (p.votingStarted) revert VotingAlreadyStarted(proposalId);
@@ -199,7 +206,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
         external nonReentrant returns (uint256 proposalId)
     {
         if (currentPhase != Phase.Proposing) revert InvalidPhase(currentPhase);
-        if (block.timestamp >= proposingDeadline) revert ProposingDeadlinePassed();
+        if (_now() >= proposingDeadline) revert ProposingDeadlinePassed();
         if (bytes(description).length > 900) revert DescriptionTooLong(bytes(description).length);
 
         uint256 balance = token.balanceOf(msg.sender);
@@ -220,7 +227,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
         external nonReentrant returns (uint256 proposalId)
     {
         if (currentPhase != Phase.Proposing) revert InvalidPhase(currentPhase);
-        if (block.timestamp >= proposingDeadline) revert ProposingDeadlinePassed();
+        if (_now() >= proposingDeadline) revert ProposingDeadlinePassed();
         if (bytes(description).length > 900) revert DescriptionTooLong(bytes(description).length);
 
         proposalId = nextProposalId++;
@@ -242,7 +249,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
     function cosign(uint256 proposalId) external nonReentrant {
         Proposal storage p = _requireProposal(proposalId);
         if (!p.isCosignProposal) revert NotACosignProposal(proposalId);
-        if (block.timestamp >= p.cosignDeadline) revert CosignDeadlinePassed(proposalId);
+        if (_now() >= p.cosignDeadline) revert CosignDeadlinePassed(proposalId);
         if (hasCosigned[proposalId][msg.sender]) revert AlreadyCosigned(msg.sender);
 
         hasCosigned[proposalId][msg.sender] = true;
@@ -264,7 +271,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
     {
         Proposal storage p = _requireProposal(proposalId);
         if (!p.votingStarted) revert VotingNotStarted(proposalId);
-        if (block.timestamp > p.voteEnd) revert VotingEnded(proposalId);
+        if (_now() > p.voteEnd) revert VotingEnded(proposalId);
         if (hasVoted[proposalId][msg.sender]) revert AlreadyVoted(msg.sender);
         if (proxyOf[proposalId][msg.sender] != address(0)) revert AlreadyGrantedProxy(msg.sender);
 
@@ -279,7 +286,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
 
     function finalizeProposal(uint256 proposalId) external onlyOwner nonReentrant {
         Proposal storage p = _requireProposal(proposalId);
-        if (block.timestamp <= p.voteEnd) revert VotingEnded(proposalId);
+        if (_now() <= p.voteEnd) revert VotingEnded(proposalId);
         if (p.finalized) revert ProposalAlreadyFinalized(proposalId);
         p.result = _computeResult(p);
         p.finalized = true;
@@ -292,7 +299,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
         if (proxy == address(0)) revert ZeroAddress();
         Proposal storage p = _requireProposal(proposalId);
         if (!p.votingStarted) revert VotingNotStarted(proposalId);
-        if (block.timestamp > p.voteEnd) revert VotingEnded(proposalId);
+        if (_now() > p.voteEnd) revert VotingEnded(proposalId);
         if (hasVoted[proposalId][msg.sender]) revert AlreadyVoted(msg.sender);
         if (proxyOf[proposalId][msg.sender] != address(0)) revert ProxyAlreadyGranted(msg.sender);
         proxyOf[proposalId][msg.sender] = proxy;
@@ -305,7 +312,7 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
         Proposal storage p = _requireProposal(proposalId);
         if (proxyOf[proposalId][delegator] != msg.sender) revert NotAProxy(msg.sender, delegator, proposalId);
         if (proxyHasVoted[proposalId][delegator]) revert ProxyAlreadyVoted(proposalId, delegator);
-        if (block.timestamp > p.voteEnd) revert VotingEnded(proposalId);
+        if (_now() > p.voteEnd) revert VotingEnded(proposalId);
 
         uint256 bal  = token.balanceOfAt(delegator, p.snapshotId);
         uint256 cast = forVotes + againstVotes + abstainVotes;
