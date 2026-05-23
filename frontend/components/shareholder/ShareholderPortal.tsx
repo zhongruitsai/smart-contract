@@ -10,6 +10,7 @@ type Tab = "proposals" | "election";
 
 export function ShareholderPortal() {
   const [tab, setTab] = useState<Tab>("proposals");
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   return (
     <section className="space-y-4">
@@ -32,8 +33,8 @@ export function ShareholderPortal() {
 
       {tab === "proposals" && (
         <div className="space-y-4">
-          <ProposalForm />
-          <ProposalList />
+          <ProposalForm onSuccess={() => setRefreshSignal(s => s + 1)} />
+          <ProposalList refreshSignal={refreshSignal} />
         </div>
       )}
       {tab === "election" && <ElectionPanel />}

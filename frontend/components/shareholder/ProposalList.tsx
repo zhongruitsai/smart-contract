@@ -1,6 +1,7 @@
 "use client";
 
 import { useReadContract, useBlock, useAccount } from "wagmi";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
@@ -123,7 +124,7 @@ function ProposalCard({ id, isAdmin }: { id: bigint; isAdmin: boolean }) {
   );
 }
 
-export function ProposalList() {
+export function ProposalList({ refreshSignal }: { refreshSignal?: number }) {
   const { address } = useAccount();
 
   const { data: owner } = useReadContract({
@@ -141,6 +142,10 @@ export function ProposalList() {
     chainId: CHAIN_ID,
     query: { refetchInterval: POLL_MS },
   });
+
+  useEffect(() => {
+    if (refreshSignal) refetch();
+  }, [refreshSignal]);
 
   const count = nextId ? Number(nextId) : 0;
 

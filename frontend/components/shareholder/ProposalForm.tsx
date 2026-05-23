@@ -7,7 +7,7 @@ import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
 import { extractRevertReason, PROPOSAL_TYPE_LABELS } from "@/lib/utils";
 
-export function ProposalForm() {
+export function ProposalForm({ onSuccess }: { onSuccess?: () => void }) {
   const { writeContract, isPending } = useContractWrite();
   const [description, setDescription] = useState("");
   const [pType, setPType] = useState<number>(0);
@@ -27,6 +27,7 @@ export function ProposalForm() {
       toast.success("提案已成功上鏈");
       setDescription("");
       setOpen(false);
+      onSuccess?.();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
