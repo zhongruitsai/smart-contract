@@ -6,7 +6,7 @@ import { parseUnits } from "viem";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
-import { GOVERNANCE_VOTING_ABI } from "@/lib/abis";
+import { GOVERNANCE_VOTING_ABI, GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 import type { Proposal } from "@/types/governance";
 
@@ -26,9 +26,12 @@ function ProxyVoteForm({ proposal, delegator, delegatorName }: { proposal: Propo
   const { data, refetch } = useReadContracts({
     contracts: [
       { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "proxyHasVoted", args: [proposal.id, delegator as `0x${string}`], chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "balanceOfAt", args: [delegator as `0x${string}`, proposal.snapshotId], chainId: CHAIN_ID },
     ],
   });
   const alreadyVoted = data?.[0]?.result as boolean | undefined;
+  const balance = data?.[1]?.result as bigint | undefined;
+  const shares = balance ? Number(balance / BigInt(10 ** 18)) : null;
 
   async function voteOnBehalf(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +53,7 @@ function ProxyVoteForm({ proposal, delegator, delegatorName }: { proposal: Propo
 
   return (
     <div className="space-y-1.5 border rounded p-2.5 bg-amber-50">
-      <p className="text-xs font-medium text-amber-800">代理投票：{delegatorName}</p>
+      <p className="text-xs font-medium text-amber-800">代理投票：{delegatorName}{shares !== null ? `（${shares} 股）` : ""}</p>
       <form onSubmit={voteOnBehalf} className="space-y-1.5">
         <div className="flex gap-2">
           <input type="number" min={0} placeholder="贊成" value={forV}     onChange={(e) => setForV(e.target.value)}     className="w-full px-2 py-1 border rounded text-sm" />
