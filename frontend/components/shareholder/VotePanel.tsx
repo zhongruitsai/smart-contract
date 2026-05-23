@@ -26,6 +26,15 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
     chainId: CHAIN_ID,
   });
 
+  const { data: currentProxy } = useReadContract({
+    address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+    abi: GOVERNANCE_VOTING_ABI,
+    functionName: "proxyOf",
+    args: [proposal.id, address ?? "0x0000000000000000000000000000000000000000"],
+    chainId: CHAIN_ID,
+  });
+  const hasProxy = currentProxy && currentProxy !== "0x0000000000000000000000000000000000000000";
+
   async function vote(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -41,6 +50,7 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
   }
 
   if (voted) return <p className="text-sm text-green-600">您已完成投票。</p>;
+  if (hasProxy) return null;
 
   return (
     <form onSubmit={vote} className="space-y-2">

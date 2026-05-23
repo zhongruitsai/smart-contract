@@ -1,6 +1,6 @@
 "use client";
 
-import { useReadContract, useBlock, useAccount } from "wagmi";
+import { useReadContract, useAccount } from "wagmi";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
@@ -9,6 +9,7 @@ import { GOVERNANCE_VOTING_ABI, GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { PROPOSAL_TYPE_LABELS, VOTE_RESULT_LABELS, formatTimestamp, extractRevertReason } from "@/lib/utils";
 import { VotePanel } from "./VotePanel";
 import { ProxyPanel } from "./ProxyPanel";
+import { ProxyVotePanel } from "./ProxyVotePanel";
 import { CosignList } from "./CosignList";
 import type { Proposal } from "@/types/governance";
 import { formatUnits } from "viem";
@@ -29,7 +30,13 @@ function useProposal(id: bigint) {
 function ProposalCard({ id, isAdmin }: { id: bigint; isAdmin: boolean }) {
   const { writeContract, isPending } = useContractWrite();
   const { data, isLoading } = useProposal(id);
-  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
+  const { data: contractTime } = useReadContract({
+    address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+    abi: GOVERNANCE_VOTING_ABI,
+    functionName: "currentTime",
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
 
   if (isLoading || !data) {
     return <div className="border rounded-lg p-4 text-sm text-muted-foreground">載入中…</div>;
@@ -57,7 +64,7 @@ function ProposalCard({ id, isAdmin }: { id: bigint; isAdmin: boolean }) {
     result:                raw[17] as number,
   };
 
-  const blockTs = block?.timestamp ?? BigInt(Math.floor(Date.now() / 1000));
+  const blockTs = (contractTime as bigint | undefined) ?? BigInt(Math.floor(Date.now() / 1000));
   const votingOpen = proposal.votingStarted && !proposal.finalized && blockTs <= proposal.voteEnd;
   const canFinalize = proposal.votingStarted && !proposal.finalized && blockTs > proposal.voteEnd;
 
@@ -113,6 +120,7 @@ function ProposalCard({ id, isAdmin }: { id: bigint; isAdmin: boolean }) {
         <div className="space-y-2 border-t pt-2">
           <VotePanel proposal={proposal} />
           <ProxyPanel proposal={proposal} />
+          <ProxyVotePanel proposal={proposal} />
         </div>
       )}
       {canFinalize && isAdmin && (
@@ -163,7 +171,7 @@ export function ProposalList({ refreshSignal }: { refreshSignal?: number }) {
           <span className="text-xs">（若剛提交提案，請稍候 3 秒後自動更新，或點「重新整理」）</span>
         </p>
       )}
-      {Array.from({ length: count }, (_, i) => <ProposalCard key={i} id={BigInt(i)} isAdmin={isAdmin} />)}
+      {Array.from({ length: count }, (_, i) => count - 1 - i).map((i) => <ProposalCard key={i} id={BigInt(i)} isAdmin={isAdmin} />)}
     </div>
   );
 }
