@@ -153,11 +153,31 @@ function Step1Card({ pDeadline, vDeadline, nextProposalId, blockTimestamp, busy,
 }
 
 function Step2Card({ nextProposalId, busy, onClose }: { nextProposalId: bigint | undefined; busy: boolean; onClose: () => void }) {
-  const count = nextProposalId ? Number(nextProposalId) : 0;
+  const total = nextProposalId ? Number(nextProposalId) : 0;
+
+  const { data: proposalData } = useReadContracts({
+    contracts: Array.from({ length: total }, (_, i) => ({
+      address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+      abi: GOVERNANCE_VOTING_ABI,
+      functionName: "proposals",
+      args: [BigInt(i)],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 3000 },
+  });
+
+  const activeCount = proposalData
+    ? proposalData.filter((d) => {
+        const raw = d.result as readonly unknown[] | undefined;
+        const finalized = raw?.[16] as boolean | undefined;
+        return finalized === false;
+      }).length
+    : total;
+
   return (
     <div className="space-y-3">
       <InfoBox>投票期間，股東可在各提案卡片上進行投票或委託。投票截止後，管理員可點擊提案卡片上的「結算提案」按鈕完成計票。所有提案結算完畢後，關閉本次會議。</InfoBox>
-      <Stat label="進行中提案" value={`${count} 件`} />
+      <Stat label="進行中提案" value={`${activeCount} 件`} />
       <button disabled={busy} onClick={onClose} className="w-full py-1.5 border border-red-300 text-red-500 rounded text-sm hover:bg-red-50 disabled:opacity-40 transition-colors">
         關閉本次會議
       </button>
