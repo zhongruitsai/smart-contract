@@ -6,15 +6,10 @@ import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { formatUnits } from "viem";
 
 const SHAREHOLDERS = [
-  { name: "Alice",  address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" as `0x${string}` },
-  { name: "Bob",    address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" as `0x${string}` },
-  { name: "Carol",  address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906" as `0x${string}` },
-  { name: "Dave",   address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" as `0x${string}` },
-  { name: "Eve",    address: "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc" as `0x${string}` },
-  { name: "Frank",  address: "0x976EA74026E726554dB657fA54763abd0C3a0aa9" as `0x${string}` },
-  { name: "Grace",  address: "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955" as `0x${string}` },
-  { name: "Henry",  address: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" as `0x${string}` },
-  { name: "Ivan",   address: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720" as `0x${string}` },
+  { name: "Account 1 (Admin)", address: "0x1d599054325fac1f349a46843f0788879779c530" as `0x${string}` },
+  { name: "Account 2",         address: "0x31fE085cE31BA1730353D68295Aa93FF22504938" as `0x${string}` },
+  { name: "Account 3",         address: "0x697a1637b0fC7e23ba1a842B1D213DE01C9E17c3" as `0x${string}` },
+  { name: "Account 4",         address: "0x7cCf00BD341aCABdab1305423CA2d7eb5cc66F2B" as `0x${string}` },
 ];
 
 export function ShareholderRegistry() {
