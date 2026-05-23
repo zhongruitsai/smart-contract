@@ -12,12 +12,12 @@
  *   3. Copy the three addresses from Etherscan or the run output.
  */
 // Chain ID: 31337 = local Anvil, 11155111 = Sepolia
-export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "31337") as 31337 | 11155111;
+export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111") as 31337 | 11155111;
 
 export const CONTRACT_ADDRESSES = {
-  GOVERNANCE_TOKEN:  (process.env.NEXT_PUBLIC_GOVERNANCE_TOKEN  ?? "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d") as `0x${string}`,
-  GOVERNANCE_VOTING: (process.env.NEXT_PUBLIC_GOVERNANCE_VOTING ?? "0x59b670e9fA9D0A427751Af201D676719a970857b") as `0x${string}`,
-  DIRECTOR_ELECTION: (process.env.NEXT_PUBLIC_DIRECTOR_ELECTION ?? "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1") as `0x${string}`,
+  GOVERNANCE_TOKEN:  (process.env.NEXT_PUBLIC_GOVERNANCE_TOKEN  ?? "0x32a113f43ba7fe93d8b261f9b29a806dbc0958cb") as `0x${string}`,
+  GOVERNANCE_VOTING: (process.env.NEXT_PUBLIC_GOVERNANCE_VOTING ?? "0x14003e4ad7a04255f6a26d67227415224270832c") as `0x${string}`,
+  DIRECTOR_ELECTION: (process.env.NEXT_PUBLIC_DIRECTOR_ELECTION ?? "0x37ae1715d55f5fdb22a73869c21a5300965db093") as `0x${string}`,
 };
 
 import { http, createConfig } from "wagmi";
