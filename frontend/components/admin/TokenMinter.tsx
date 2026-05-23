@@ -8,7 +8,7 @@ import { CONTRACT_ADDRESSES } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 
-export function TokenMinter() {
+export function TokenMinter({ onSuccess }: { onSuccess?: () => void }) {
   const { writeContract, isPending } = useContractWrite();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -29,6 +29,7 @@ export function TokenMinter() {
       toast.success(`成功發行 ${amount} 股份給 ${recipient.slice(0, 6)}…${recipient.slice(-4)}`);
       setAmount("");
       setRecipient("");
+      onSuccess?.();
     } catch (err) {
       toast.error(extractRevertReason(err));
     }

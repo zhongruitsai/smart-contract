@@ -1,6 +1,7 @@
 "use client";
 
 import { useReadContracts } from "wagmi";
+import { useEffect } from "react";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { formatUnits } from "viem";
@@ -12,7 +13,7 @@ const SHAREHOLDERS = [
   { name: "Account 4",         address: "0x7cCf00BD341aCABdab1305423CA2d7eb5cc66F2B" as `0x${string}` },
 ];
 
-export function ShareholderRegistry() {
+export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number }) {
   const { data, isLoading, refetch } = useReadContracts({
     query: { refetchInterval: 5000 },
     contracts: [
@@ -31,6 +32,8 @@ export function ShareholderRegistry() {
       },
     ],
   });
+
+  useEffect(() => { if (refreshSignal) refetch(); }, [refreshSignal]);
 
   const totalSupply = data?.[SHAREHOLDERS.length]?.result as bigint | undefined;
 

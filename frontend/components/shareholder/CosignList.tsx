@@ -13,7 +13,7 @@ export function CosignList({ proposal }: { proposal: Proposal }) {
   const { address } = useAccount();
   const { writeContract, isPending } = useContractWrite();
 
-  const { data: alreadyCosigned } = useReadContract({
+  const { data: alreadyCosigned, refetch: refetchCosigned } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "hasCosigned",
@@ -29,6 +29,7 @@ export function CosignList({ proposal }: { proposal: Proposal }) {
     try {
       await writeContract({ address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "cosign", args: [proposal.id] });
       toast.success("聯署成功上鏈");
+      refetchCosigned();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 

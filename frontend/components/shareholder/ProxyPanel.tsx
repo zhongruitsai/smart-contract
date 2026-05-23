@@ -15,7 +15,7 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
   const { writeContract, isPending } = useContractWrite();
   const [proxyAddr, setProxyAddr] = useState("");
 
-  const { data: currentProxy } = useReadContract({
+  const { data: currentProxy, refetch: refetchProxy } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "proxyOf",
@@ -29,6 +29,7 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
     try {
       await writeContract({ address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "grantProxy", args: [proposal.id, proxyAddr as `0x${string}`] });
       toast.success("委託已成功上鏈");
+      refetchProxy();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
@@ -36,6 +37,7 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
     try {
       await writeContract({ address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "revokeProxy", args: [proposal.id] });
       toast.success("委託已撤回");
+      refetchProxy();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 

@@ -18,7 +18,7 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
   const [againstV, setAgainstV] = useState("");
   const [abstainV, setAbstainV] = useState("");
 
-  const { data: voted } = useReadContract({
+  const { data: voted, refetch: refetchVoted } = useReadContract({
     address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
     abi: GOVERNANCE_VOTING_ABI,
     functionName: "hasVoted",
@@ -36,6 +36,7 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
         args: [parseUnits(forV || "0", 18), parseUnits(againstV || "0", 18), parseUnits(abstainV || "0", 18), proposal.id],
       });
       toast.success("投票已成功上鏈");
+      refetchVoted();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
