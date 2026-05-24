@@ -26,22 +26,22 @@ export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number 
     if (!publicClient) return;
     setScanning(true);
     try {
+      const latest = await publicClient.getBlockNumber();
+      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
       const logs = await publicClient.getLogs({
         address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
         event: TRANSFER_EVENT,
-        fromBlock: BigInt(0),
+        fromBlock,
         toBlock: "latest",
       });
-      const unique = [
-        ...new Set(
-          logs
-            .map((l) => (l.args.to as string).toLowerCase())
-            .filter((addr) => addr !== "0x0000000000000000000000000000000000000000")
-        ),
-      ] as `0x${string}`[];
-      setHolders(unique);
+      const fromEvents = logs
+        .map((l) => (l.args.to as string).toLowerCase())
+        .filter((addr) => addr !== "0x0000000000000000000000000000000000000000");
+      const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...fromEvents])] as `0x${string}`[];
+      setHolders(merged);
     } catch (err) {
-      console.error("掃描持股人失敗", err);
+      console.error("掃描持股人失敗，退回已知清單", err);
+      setHolders(Object.keys(KNOWN_NAMES) as `0x${string}`[]);
     } finally {
       setScanning(false);
     }
