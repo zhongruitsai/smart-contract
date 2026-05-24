@@ -1,6 +1,6 @@
 "use client";
 
-import { useReadContract, useBlock } from "wagmi";
+import { useReadContract } from "wagmi";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
@@ -21,8 +21,14 @@ export function CosignList({ proposal }: { proposal: Proposal }) {
     chainId: CHAIN_ID,
   });
 
-  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
-  const blockTs = block?.timestamp ?? BigInt(Math.floor(Date.now() / 1000));
+  const { data: contractTime } = useReadContract({
+    address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+    abi: GOVERNANCE_VOTING_ABI,
+    functionName: "currentTime",
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
+  const blockTs = (contractTime as bigint | undefined) ?? BigInt(Math.floor(Date.now() / 1000));
   const cosignOpen = proposal.cosignDeadline > BigInt(0) && blockTs <= proposal.cosignDeadline;
 
   async function cosign() {
