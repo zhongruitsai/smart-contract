@@ -281,7 +281,11 @@ export function PhaseController() {
         {(phase === 0 || phase === 3) && <Step0Card busy={isPending} onSubmit={openPhase} />}
         {phase === 1 && <Step1Card pDeadline={pDeadline} vDeadline={vDeadline} nextProposalId={nextProposalId} blockTimestamp={blockTimestamp} busy={isPending} isLocal={false} onStartVoting={startVoting} onClose={closePhase} />}
         {phase === 2 && <Step2Card nextProposalId={nextProposalId} busy={isPending} onClose={closePhase} />}
-        {phase === 3 && <Step3Card busy={isPending} onReopen={() => openPhase(defaultDatetime(45), false, false)} />}
+        {phase === 3 && <Step3Card busy={isPending} onReopen={() => {
+        const d = new Date((Number(blockTimestamp) + 45 * 86400) * 1000);
+        d.setSeconds(0, 0);
+        openPhase(d.toISOString().slice(0, 16), false, false);
+      }} />}
       </div>
     </div>
   );
