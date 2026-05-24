@@ -1,27 +1,62 @@
 "use client";
 
-import { useReadContracts } from "wagmi";
-import { useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useReadContracts, usePublicClient } from "wagmi";
+import { formatUnits, parseAbiItem } from "viem";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
-import { formatUnits } from "viem";
 
-const SHAREHOLDERS = [
-  { name: "Account 1 (Admin)", address: "0x1d599054325fac1f349a46843f0788879779c530" as `0x${string}` },
-  { name: "Account 2",         address: "0x31fE085cE31BA1730353D68295Aa93FF22504938" as `0x${string}` },
-  { name: "Account 3",         address: "0x697a1637b0fC7e23ba1a842B1D213DE01C9E17c3" as `0x${string}` },
-  { name: "Account 4",         address: "0x7cCf00BD341aCABdab1305423CA2d7eb5cc66F2B" as `0x${string}` },
-];
+const KNOWN_NAMES: Record<string, string> = {
+  "0x1d599054325fac1f349a46843f0788879779c530": "Account 1 (Admin)",
+  "0x31fe085ce31ba1730353d68295aa93ff22504938": "Account 2",
+  "0x697a1637b0fc7e23ba1a842b1d213de01c9e17c3": "Account 3",
+  "0x7ccf00bd341acabdab1305423ca2d7eb5cc66f2b": "Account 4",
+};
+
+const TRANSFER_EVENT = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
+);
 
 export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number }) {
-  const { data, isLoading, refetch } = useReadContracts({
-    query: { refetchInterval: 5000 },
+  const publicClient = usePublicClient({ chainId: CHAIN_ID });
+  const [holders, setHolders] = useState<`0x${string}`[]>([]);
+  const [scanning, setScanning] = useState(true);
+
+  const fetchHolders = useCallback(async () => {
+    if (!publicClient) return;
+    setScanning(true);
+    try {
+      const logs = await publicClient.getLogs({
+        address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+        event: TRANSFER_EVENT,
+        fromBlock: BigInt(0),
+        toBlock: "latest",
+      });
+      const unique = [
+        ...new Set(
+          logs
+            .map((l) => (l.args.to as string).toLowerCase())
+            .filter((addr) => addr !== "0x0000000000000000000000000000000000000000")
+        ),
+      ] as `0x${string}`[];
+      setHolders(unique);
+    } catch (err) {
+      console.error("掃描持股人失敗", err);
+    } finally {
+      setScanning(false);
+    }
+  }, [publicClient]);
+
+  useEffect(() => { fetchHolders(); }, [fetchHolders]);
+  useEffect(() => { if (refreshSignal) fetchHolders(); }, [refreshSignal, fetchHolders]);
+
+  const { data: balanceData, refetch } = useReadContracts({
     contracts: [
-      ...SHAREHOLDERS.map((s) => ({
+      ...holders.map((addr) => ({
         address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
         abi: GOVERNANCE_TOKEN_ABI,
         functionName: "balanceOf" as const,
-        args: [s.address],
+        args: [addr],
         chainId: CHAIN_ID,
       })),
       {
@@ -31,20 +66,27 @@ export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number 
         chainId: CHAIN_ID,
       },
     ],
+    query: { refetchInterval: 5000, enabled: holders.length > 0 },
   });
 
-  useEffect(() => { if (refreshSignal) refetch(); }, [refreshSignal]);
+  const totalSupply = balanceData?.[holders.length]?.result as bigint | undefined;
 
-  const totalSupply = data?.[SHAREHOLDERS.length]?.result as bigint | undefined;
+  const rows = holders
+    .map((addr, i) => {
+      const balance = balanceData?.[i]?.result as bigint | undefined;
+      const pct =
+        balance !== undefined && totalSupply && totalSupply > BigInt(0)
+          ? ((Number(balance) / Number(totalSupply)) * 100).toFixed(2)
+          : "0.00";
+      const name = KNOWN_NAMES[addr.toLowerCase()] ?? `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+      return { addr, name, balance, pct };
+    })
+    .filter((r) => r.balance !== undefined && r.balance > BigInt(0));
 
-  const rows = SHAREHOLDERS.map((s, i) => {
-    const balance = data?.[i]?.result as bigint | undefined;
-    const pct =
-      balance !== undefined && totalSupply && totalSupply > BigInt(0)
-        ? ((Number(balance) / Number(totalSupply)) * 100).toFixed(2)
-        : "0.00";
-    return { ...s, balance, pct };
-  }).filter((r) => r.balance !== undefined && r.balance > BigInt(0));
+  function handleRefresh() {
+    fetchHolders();
+    refetch();
+  }
 
   return (
     <div className="border rounded-lg p-4 space-y-3">
@@ -56,17 +98,14 @@ export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number 
               總發行量：{formatUnits(totalSupply, 18)} 股
             </span>
           )}
-          <button
-            onClick={() => refetch()}
-            className="text-xs text-primary hover:underline"
-          >
+          <button onClick={handleRefresh} className="text-xs text-primary hover:underline">
             ↺ 更新
           </button>
         </div>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">讀取中…</p>
+      {scanning ? (
+        <p className="text-sm text-muted-foreground">掃描鏈上紀錄中…</p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">目前沒有持股記錄。</p>
       ) : (
@@ -81,10 +120,10 @@ export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number 
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.address} className="border-b last:border-0 hover:bg-muted/30">
+              <tr key={r.addr} className="border-b last:border-0 hover:bg-muted/30">
                 <td className="py-1.5 font-medium">{r.name}</td>
                 <td className="py-1.5 font-mono text-xs text-muted-foreground">
-                  {r.address.slice(0, 6)}…{r.address.slice(-4)}
+                  {r.addr.slice(0, 6)}…{r.addr.slice(-4)}
                 </td>
                 <td className="py-1.5 text-right tabular-nums">
                   {formatUnits(r.balance!, 18)}
