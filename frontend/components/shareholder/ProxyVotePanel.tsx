@@ -89,34 +89,33 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
   const scanDelegators = useCallback(async () => {
     if (!publicClient || !address) return;
 
-    // Start with known addresses as guaranteed baseline
-    const knownAddrs = Object.keys(KNOWN_NAMES).filter(
-      (a) => a !== address.toLowerCase()
-    );
-
-    // Also scan events to discover unknown accounts (best-effort)
+    const CHUNK = BigInt(50000);
     let eventAddrs: string[] = [];
     try {
-      const latest    = await publicClient.getBlockNumber();
-      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
-      const logs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-        event:   PROXY_GRANTED_EVENT,
-        fromBlock,
-        toBlock: "latest",
-      });
-      eventAddrs = logs
-        .filter(
-          (l) =>
-            l.args.proposalId === proposal.id &&
-            (l.args.proxy as string).toLowerCase() === address.toLowerCase()
-        )
-        .map((l) => (l.args.delegator as string).toLowerCase());
+      const latest = await publicClient.getBlockNumber();
+      // Scan all blocks in 50k-block chunks to avoid RPC range limits
+      for (let from = BigInt(0); from <= latest; from += CHUNK) {
+        const to = from + CHUNK - BigInt(1) < latest ? from + CHUNK - BigInt(1) : latest;
+        const logs = await publicClient.getLogs({
+          address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
+          event:   PROXY_GRANTED_EVENT,
+          fromBlock: from,
+          toBlock:   to,
+        });
+        const addrs = logs
+          .filter(
+            (l) =>
+              l.args.proposalId === proposal.id &&
+              (l.args.proxy as string).toLowerCase() === address.toLowerCase()
+          )
+          .map((l) => (l.args.delegator as string).toLowerCase());
+        eventAddrs.push(...addrs);
+      }
     } catch (err) {
       console.error("掃描委託事件失敗", err);
     }
 
-    setCandidates([...new Set([...knownAddrs, ...eventAddrs])]);
+    setCandidates([...new Set(eventAddrs)]);
   }, [publicClient, address, proposal.id]);
 
   useEffect(() => {
