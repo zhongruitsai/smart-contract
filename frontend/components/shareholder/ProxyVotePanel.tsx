@@ -130,12 +130,16 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
     query: { refetchInterval: 3000, enabled: candidates.length > 0 },
   });
 
-  const activeDelegators = candidates.filter((_, i) => {
-    const proxy = proxyData?.[i]?.result as string | undefined;
-    return proxy && address && proxy.toLowerCase() === address.toLowerCase();
-  });
+  const proxyDataLoaded = proxyData !== undefined;
 
-  if (activeDelegators.length === 0) return null;
+  const activeDelegators = proxyDataLoaded
+    ? candidates.filter((_, i) => {
+        const proxy = proxyData?.[i]?.result as string | undefined;
+        return proxy && address && proxy.toLowerCase() === address.toLowerCase();
+      })
+    : candidates; // show all while loading, ProxyVoteForm handles per-row state
+
+  if (candidates.length === 0) return null;
 
   return (
     <div className="space-y-2 border-t pt-2">
