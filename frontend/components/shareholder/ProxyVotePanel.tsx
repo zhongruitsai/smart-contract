@@ -17,8 +17,8 @@ const KNOWN_NAMES: Record<string, string> = {
   "0x7ccf00bd341acabdab1305423ca2d7eb5cc66f2b": "Account 4",
 };
 
-const PROXY_GRANTED_EVENT = parseAbiItem(
-  "event ProxyGranted(uint256 indexed proposalId, address indexed delegator, address indexed proxy)"
+const TRANSFER_EVENT = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
 );
 
 function shortAddr(addr: string) {
@@ -38,7 +38,7 @@ function ProxyVoteForm({ proposal, delegator }: { proposal: Proposal; delegator:
   const { data, refetch } = useReadContracts({
     contracts: [
       { address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "proxyHasVoted", args: [proposal.id, delegator as `0x${string}`], chainId: CHAIN_ID },
-      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN, abi: GOVERNANCE_TOKEN_ABI, functionName: "balanceOfAt", args: [delegator as `0x${string}`, proposal.snapshotId], chainId: CHAIN_ID },
+      { address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,  abi: GOVERNANCE_TOKEN_ABI,  functionName: "balanceOfAt",   args: [delegator as `0x${string}`, proposal.snapshotId], chainId: CHAIN_ID },
     ],
   });
   const alreadyVoted = data?.[0]?.result as boolean | undefined;
@@ -82,54 +82,43 @@ function ProxyVoteForm({ proposal, delegator }: { proposal: Proposal; delegator:
 }
 
 export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
-  const { address }   = useAccount();
-  const publicClient  = usePublicClient({ chainId: CHAIN_ID });
-  // Known addresses are the synchronous baseline — shown immediately via proxyOf poll.
-  const knownAddrs = Object.keys(KNOWN_NAMES).filter(
-    (a) => address && a !== address.toLowerCase()
-  );
-  const [extraCandidates, setExtraCandidates] = useState<string[]>([]);
-  const candidates = [...new Set([...knownAddrs, ...extraCandidates])];
+  const { address }  = useAccount();
+  const publicClient = usePublicClient({ chainId: CHAIN_ID });
+  const [holders, setHolders] = useState<string[]>(Object.keys(KNOWN_NAMES));
 
-  const scanDelegators = useCallback(async () => {
-    if (!publicClient || !address) return;
-
-    const CHUNK = BigInt(50000);
+  // Discover all token holders via Transfer events, merged with KNOWN_NAMES
+  const fetchHolders = useCallback(async () => {
+    if (!publicClient) return;
     try {
-      const latest = await publicClient.getBlockNumber();
-      for (let from = BigInt(0); from <= latest; from += CHUNK) {
-        const to = from + CHUNK - BigInt(1) < latest ? from + CHUNK - BigInt(1) : latest;
-        const logs = await publicClient.getLogs({
-          address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-          event:   PROXY_GRANTED_EVENT,
-          fromBlock: from,
-          toBlock:   to,
-        });
-        const found = logs
-          .filter(
-            (l) =>
-              l.args.proposalId === proposal.id &&
-              (l.args.proxy as string).toLowerCase() === address.toLowerCase()
-          )
-          .map((l) => (l.args.delegator as string).toLowerCase());
-
-        // Update after every chunk so new delegators appear immediately
-        if (found.length > 0) {
-          setExtraCandidates((prev) => [...new Set([...prev, ...found])]);
-        }
-      }
-    } catch (err) {
-      console.error("掃描委託事件失敗", err);
+      const latest    = await publicClient.getBlockNumber();
+      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
+      const logs = await publicClient.getLogs({
+        address:   CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+        event:     TRANSFER_EVENT,
+        fromBlock,
+        toBlock:   "latest",
+      });
+      const fromEvents = logs
+        .map((l) => (l.args.to as string).toLowerCase())
+        .filter((a) => a !== "0x0000000000000000000000000000000000000000");
+      const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...fromEvents])];
+      setHolders(merged);
+    } catch {
+      // fallback: keep KNOWN_NAMES already in state
     }
-  }, [publicClient, address, proposal.id]);
+  }, [publicClient]);
 
   useEffect(() => {
-    scanDelegators();
-    const id = setInterval(scanDelegators, 5000);
+    fetchHolders();
+    const id = setInterval(fetchHolders, 5000);
     return () => clearInterval(id);
-  }, [scanDelegators]);
+  }, [fetchHolders]);
 
-  // Re-check proxyOf for each candidate to filter out revocations
+  // For every holder (excluding self), check if they delegated to me
+  const candidates = holders.filter(
+    (a) => address && a.toLowerCase() !== address.toLowerCase()
+  );
+
   const { data: proxyData } = useReadContracts({
     contracts: candidates.map((d) => ({
       address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
@@ -141,16 +130,12 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
     query: { refetchInterval: 3000, enabled: candidates.length > 0 },
   });
 
-  const proxyDataLoaded = proxyData !== undefined;
+  const activeDelegators = candidates.filter((_, i) => {
+    const proxy = proxyData?.[i]?.result as string | undefined;
+    return proxy && address && proxy.toLowerCase() === address.toLowerCase();
+  });
 
-  const activeDelegators = proxyDataLoaded
-    ? candidates.filter((_, i) => {
-        const proxy = proxyData?.[i]?.result as string | undefined;
-        return proxy && address && proxy.toLowerCase() === address.toLowerCase();
-      })
-    : candidates; // show all while loading, ProxyVoteForm handles per-row state
-
-  if (candidates.length === 0) return null;
+  if (activeDelegators.length === 0) return null;
 
   return (
     <div className="space-y-2 border-t pt-2">
