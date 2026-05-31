@@ -16,7 +16,7 @@ export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111") a
 
 // Block at which contracts were deployed — use as event scan start point
 export const DEPLOY_BLOCK: Record<number, bigint> = {
-  11155111: BigInt("0xa7413b"), // Sepolia deployment block (DirectorElection redeploy)
+  11155111: BigInt("0xa668c5"), // Sepolia deployment block (GovernanceToken original deploy)
   31337:    BigInt(0),          // local Hardhat
 };
 
