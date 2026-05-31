@@ -5,7 +5,7 @@ import { useReadContracts, useAccount, usePublicClient } from "wagmi";
 import { parseUnits, parseAbiItem } from "viem";
 import { toast } from "sonner";
 import { useContractWrite } from "@/hooks/useContractWrite";
-import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
+import { CONTRACT_ADDRESSES, CHAIN_ID, DEPLOY_BLOCK } from "@/lib/config";
 import { GOVERNANCE_VOTING_ABI, GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 import { extractRevertReason } from "@/lib/utils";
 import type { Proposal } from "@/types/governance";
@@ -93,7 +93,8 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
     const found: string[] = [];
     try {
       const latest = await publicClient.getBlockNumber();
-      for (let from = BigInt(0); from <= latest; from += CHUNK) {
+      const startBlock = DEPLOY_BLOCK[CHAIN_ID] ?? BigInt(0);
+      for (let from = startBlock; from <= latest; from += CHUNK) {
         const to = from + CHUNK - BigInt(1) < latest ? from + CHUNK - BigInt(1) : latest;
         const logs = await publicClient.getLogs({
           address:   CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,

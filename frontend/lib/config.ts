@@ -14,6 +14,12 @@
 // Chain ID: 31337 = local Anvil, 11155111 = Sepolia
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111") as 31337 | 11155111;
 
+// Block at which contracts were deployed — use as event scan start point
+export const DEPLOY_BLOCK: Record<number, bigint> = {
+  11155111: BigInt("0xa668c5"), // Sepolia deployment block
+  31337:    BigInt(0),          // local Hardhat
+};
+
 export const CONTRACT_ADDRESSES = {
   GOVERNANCE_TOKEN:  (process.env.NEXT_PUBLIC_GOVERNANCE_TOKEN  ?? "0xF9174f94d91cBdb968d5F48a28Fb98a917E2C041") as `0x${string}`,
   GOVERNANCE_VOTING: (process.env.NEXT_PUBLIC_GOVERNANCE_VOTING ?? "0xEb7f94cC456053E9592b8859b336F525a31FB613") as `0x${string}`,
