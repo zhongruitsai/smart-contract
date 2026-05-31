@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useReadContract, useBlock, useAccount } from "wagmi";
+import { useReadContract, useReadContracts, useAccount } from "wagmi";
 import { toast } from "sonner";
-import { parseUnits } from "viem";
+import { parseUnits, formatUnits } from "viem";
 import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
-import { extractRevertReason, formatTimestamp, formatAddress } from "@/lib/utils";
+import { extractRevertReason, formatTimestamp } from "@/lib/utils";
+import { getProfile } from "@/lib/candidateProfiles";
 import type { Election } from "@/types/governance";
 
 function ElectionCard({ id }: { id: bigint }) {
@@ -24,7 +25,7 @@ function ElectionCard({ id }: { id: bigint }) {
     query: { refetchInterval: 3000 },
   });
 
-  const { data: candidates } = useReadContract({
+  const { data: candidatesRaw } = useReadContract({
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getCandidates",
@@ -42,61 +43,148 @@ function ElectionCard({ id }: { id: bigint }) {
     query: { refetchInterval: 3000 },
   });
 
-  const { data: block } = useBlock({ watch: true, chainId: CHAIN_ID, query: { refetchInterval: 3000 } });
+  const candidates = (candidatesRaw ?? []) as `0x${string}`[];
+
+  const { data: votesData } = useReadContracts({
+    contracts: candidates.map(c => ({
+      address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+      abi: DIRECTOR_ELECTION_ABI,
+      functionName: "getCandidateVotes" as const,
+      args: [id, c],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 3000, enabled: candidates.length > 0 },
+  });
 
   if (!electionRaw) return null;
 
   const raw = electionRaw as readonly unknown[];
   const election: Election = {
-    id: raw[0] as bigint,
-    meetingDate: raw[1] as bigint,
-    seatCount: raw[2] as bigint,
-    voteEnd: raw[3] as bigint,
-    snapshotId: raw[4] as bigint,
-    finalized: raw[5] as boolean,
+    id:             raw[0] as bigint,
+    meetingDate:    raw[1] as bigint,
+    seatCount:      raw[2] as bigint,
+    voteEnd:        raw[3] as bigint,
+    snapshotId:     raw[4] as bigint,
+    finalized:      raw[5] as boolean,
     candidateCount: raw[6] as bigint,
   };
 
-  const candidateList = (candidates ?? []) as `0x${string}`[];
-  const blockTs = block?.timestamp ?? BigInt(Math.floor(Date.now() / 1000));
-  const votingOpen = blockTs <= election.voteEnd && !election.finalized;
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const votingOpen = now <= election.voteEnd && !election.finalized;
+  const totalVotes = (votesData ?? []).reduce((s, v) => s + ((v?.result as bigint) ?? 0n), 0n);
 
   async function castVotes(e: React.FormEvent) {
     e.preventDefault();
-    const addrs = candidateList.filter((c) => voteInputs[c] && Number(voteInputs[c]) > 0);
-    const votes = addrs.map((c) => parseUnits(voteInputs[c], 18));
+    const addrs = candidates.filter(c => voteInputs[c] && Number(voteInputs[c]) > 0);
+    const votes = addrs.map(c => parseUnits(voteInputs[c], 18));
     if (addrs.length === 0) { toast.error("請至少為一位候選人填入票數"); return; }
     try {
-      await writeContract({ address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION, abi: DIRECTOR_ELECTION_ABI, functionName: "castVotes", args: [id, addrs, votes] });
+      await writeContract({
+        address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+        abi: DIRECTOR_ELECTION_ABI,
+        functionName: "castVotes",
+        args: [id, addrs, votes],
+      });
       toast.success("投票已成功上鏈");
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
+  const statusLabel = election.finalized ? "已結算" : votingOpen ? "投票中" : "投票截止";
+  const statusColor = election.finalized
+    ? "bg-emerald-100 text-emerald-700"
+    : votingOpen
+    ? "bg-blue-100 text-blue-700"
+    : "bg-gray-100 text-gray-500";
+
   return (
-    <div className="border rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <div>
-          <p className="font-semibold text-sm">選舉 #{Number(id)}</p>
-          <p className="text-xs text-muted-foreground">{Number(election.seatCount)} 席次 · 截止：{formatTimestamp(election.voteEnd)}</p>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#0f2456]">選舉 #{Number(id)}</span>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusColor}`}>{statusLabel}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {Number(election.seatCount)} 席次 ‧ 截止：{formatTimestamp(election.voteEnd)}
+          </p>
         </div>
-        {election.finalized && <span className="text-xs font-semibold text-green-600">已結算</span>}
+        {totalVotes > 0n && (
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">總投票數</p>
+            <p className="text-sm font-bold text-[#0f2456]">{Number(formatUnits(totalVotes, 18)).toLocaleString()}</p>
+          </div>
+        )}
       </div>
-      {candidateList.length === 0 && <p className="text-xs text-muted-foreground">尚無候選人。</p>}
-      {candidateList.length > 0 && votingOpen && !hasVoted && (
-        <form onSubmit={castVotes} className="space-y-2">
-          <p className="text-xs text-muted-foreground">分配票數（單位：股份代幣）：</p>
-          {candidateList.map((c) => (
-            <div key={c} className="flex items-center gap-2">
-              <span className="text-xs font-mono flex-1">{formatAddress(c)}</span>
-              <input type="number" placeholder="0" min="0" value={voteInputs[c] ?? ""} onChange={(e) => setVoteInputs((prev) => ({ ...prev, [c]: e.target.value }))} className="w-28 px-2 py-1 border rounded text-sm" />
+
+      {/* Candidates */}
+      <div className="px-5 py-4">
+        {candidates.length === 0 ? (
+          <p className="text-sm text-muted-foreground">尚無候選人。</p>
+        ) : (
+          <form onSubmit={castVotes} className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {candidates.map((addr, i) => {
+                const profile = getProfile(addr);
+                const votes = (votesData?.[i]?.result as bigint) ?? 0n;
+                const maxV = totalVotes > 0n ? totalVotes : 1n;
+                const pct = Number((votes * 100n) / maxV);
+
+                return (
+                  <div key={addr} className="flex flex-col items-center gap-2 p-3 border border-border rounded-xl bg-gray-50 text-center">
+                    {profile.photo ? (
+                      <img src={profile.photo} alt={profile.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-2xl font-bold text-white shadow">
+                        {profile.name?.[0] ?? "?"}
+                      </div>
+                    )}
+                    <div className="w-full">
+                      <p className="text-sm font-semibold leading-tight">{profile.name || "候選人"}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{addr.slice(0,6)}…{addr.slice(-4)}</p>
+                      {totalVotes > 0n && (
+                        <div className="mt-1.5">
+                          <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                            <div className="h-full bg-[#0f2456] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {Number(formatUnits(votes, 18)).toLocaleString()} 票（{pct}%）
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {votingOpen && !hasVoted && (
+                      <input
+                        type="number"
+                        placeholder="分配票數"
+                        min="0"
+                        value={voteInputs[addr] ?? ""}
+                        onChange={e => setVoteInputs(prev => ({ ...prev, [addr]: e.target.value }))}
+                        className="w-full px-2 py-1.5 border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
-          <button type="submit" disabled={isPending} className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50">
-            {isPending ? "送出中…" : "投票"}
-          </button>
-        </form>
-      )}
-      {hasVoted && <p className="text-sm text-green-600">您已完成本次選舉投票。</p>}
+
+            {votingOpen && !hasVoted && (
+              <div className="flex items-center gap-3 pt-1">
+                <button type="submit" disabled={isPending}
+                  className="px-5 py-2 bg-[#0f2456] text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-[#1a3570] transition-colors">
+                  {isPending ? "送出中…" : "確認投票"}
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  可用票數 = 你的股份 × {Number(election.seatCount)} 席次，可自由分配
+                </p>
+              </div>
+            )}
+            {hasVoted && (
+              <p className="text-sm text-emerald-600 font-medium">您已完成本次選舉投票。</p>
+            )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -114,9 +202,14 @@ export function ElectionPanel() {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">董事選舉</h3>
-      {count === 0 && <p className="text-sm text-muted-foreground">目前沒有進行中的選舉。</p>}
-      {Array.from({ length: count }, (_, i) => <ElectionCard key={i} id={BigInt(i)} />)}
+      {count === 0 && (
+        <div className="bg-white border border-border rounded-xl p-8 text-center text-muted-foreground">
+          <p className="text-sm">目前沒有進行中的董事選舉</p>
+        </div>
+      )}
+      {Array.from({ length: count }, (_, i) => (
+        <ElectionCard key={i} id={BigInt(i)} />
+      ))}
     </div>
   );
 }
