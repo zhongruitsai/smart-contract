@@ -166,6 +166,25 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         candidatePhotoUrl[candidate] = photoUrl;
     }
 
+    /// @notice Remove a candidate from an election (only before finalization).
+    function removeCandidate(uint256 electionId, address candidate) external onlyOwner {
+        Election storage e = _requireElection(electionId);
+        if (e.finalized) revert ElectionAlreadyFinalized(electionId);
+        if (!e.isCandidateRegistered[candidate]) revert CandidateNotRegistered(candidate, electionId);
+
+        e.isCandidateRegistered[candidate] = false;
+
+        uint256 len = e.candidates.length;
+        for (uint256 i = 0; i < len; ) {
+            if (e.candidates[i] == candidate) {
+                e.candidates[i] = e.candidates[len - 1];
+                e.candidates.pop();
+                break;
+            }
+            unchecked { ++i; }
+        }
+    }
+
     // ─── Voting ───────────────────────────────────────────────────────────────
 
     /**

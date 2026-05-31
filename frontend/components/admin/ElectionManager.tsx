@@ -164,6 +164,7 @@ function RegisterCandidateForm({ electionId, onAdded }: { electionId: bigint; on
 function ElectionAdminCard({ id }: { id: bigint }) {
   const publicClient = usePublicClient({ chainId: CHAIN_ID });
   const { writeContract, isPending: finalizing } = useContractWrite();
+  const { writeContract: removeCandidate, isPending: removing } = useContractWrite();
   const [refresh, setRefresh] = useState(0);
 
   const { data: electionRaw } = useReadContract({
@@ -307,6 +308,26 @@ function ElectionAdminCard({ id }: { id: bigint }) {
                     <p className="text-[10px] text-muted-foreground font-mono">{addr.slice(0,6)}…{addr.slice(-4)}</p>
                     <p className="text-xs text-[#0f2456] font-bold mt-1">{Number(formatUnits(votes, 18)).toLocaleString()} 票</p>
                   </div>
+                  {!election.finalized && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await removeCandidate({
+                            address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+                            abi: DIRECTOR_ELECTION_ABI,
+                            functionName: "removeCandidate",
+                            args: [id, addr],
+                          });
+                          toast.success("候選人已移除");
+                          setRefresh(r => r + 1);
+                        } catch (err) { toast.error(extractRevertReason(err)); }
+                      }}
+                      disabled={removing}
+                      className="text-[10px] text-red-400 hover:text-red-600 transition-colors mt-1 disabled:opacity-50"
+                    >
+                      {removing ? "移除中…" : "移除"}
+                    </button>
+                  )}
                 </div>
               );
             })}
