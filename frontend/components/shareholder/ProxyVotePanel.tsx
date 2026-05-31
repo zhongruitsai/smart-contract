@@ -84,16 +84,20 @@ function ProxyVoteForm({ proposal, delegator }: { proposal: Proposal; delegator:
 export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
   const { address }   = useAccount();
   const publicClient  = usePublicClient({ chainId: CHAIN_ID });
-  const [candidates, setCandidates] = useState<string[]>([]);
+  // Known addresses are the synchronous baseline — shown immediately via proxyOf poll.
+  const knownAddrs = Object.keys(KNOWN_NAMES).filter(
+    (a) => address && a !== address.toLowerCase()
+  );
+  const [extraCandidates, setExtraCandidates] = useState<string[]>([]);
+  const candidates = [...new Set([...knownAddrs, ...extraCandidates])];
 
   const scanDelegators = useCallback(async () => {
     if (!publicClient || !address) return;
 
     const CHUNK = BigInt(50000);
-    let eventAddrs: string[] = [];
+    const found: string[] = [];
     try {
       const latest = await publicClient.getBlockNumber();
-      // Scan all blocks in 50k-block chunks to avoid RPC range limits
       for (let from = BigInt(0); from <= latest; from += CHUNK) {
         const to = from + CHUNK - BigInt(1) < latest ? from + CHUNK - BigInt(1) : latest;
         const logs = await publicClient.getLogs({
@@ -102,20 +106,24 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
           fromBlock: from,
           toBlock:   to,
         });
-        const addrs = logs
+        logs
           .filter(
             (l) =>
               l.args.proposalId === proposal.id &&
               (l.args.proxy as string).toLowerCase() === address.toLowerCase()
           )
-          .map((l) => (l.args.delegator as string).toLowerCase());
-        eventAddrs.push(...addrs);
+          .forEach((l) => found.push((l.args.delegator as string).toLowerCase()));
       }
     } catch (err) {
       console.error("掃描委託事件失敗", err);
     }
 
-    setCandidates([...new Set(eventAddrs)]);
+    setExtraCandidates((prev) => {
+      const merged = [...new Set([...prev, ...found])];
+      return merged.length === prev.length && merged.every((v, i) => v === prev[i])
+        ? prev
+        : merged;
+    });
   }, [publicClient, address, proposal.id]);
 
   useEffect(() => {
