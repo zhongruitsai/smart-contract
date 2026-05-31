@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>公司治理系統功能說明文件</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">公司治理系統功能說明文件</h1>
+</header>
+<h1 id="公司治理系統功能說明文件">公司治理系統功能說明文件</h1>
+<h2 id="系統架構">系統架構</h2>
+<table>
+<thead>
+<tr>
+<th>層次</th>
+<th>技術</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>智能合約</td>
+<td>Solidity 0.8.20</td>
+<td>部署於 Sepolia 測試網</td>
+</tr>
+<tr>
+<td>前端框架</td>
+<td>Next.js 14 (App Router)</td>
+<td>靜態匯出，部署於 GitHub Pages</td>
+</tr>
+<tr>
+<td>區塊鏈互動</td>
+<td>wagmi v2 + viem</td>
+<td>讀寫合約、監聽事件</td>
+</tr>
+<tr>
+<td>錢包</td>
+<td>MetaMask (injected connector)</td>
+<td>簽署交易</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="一委託投票proxy-voting">一、委託投票（Proxy Voting）</h2>
+<h3 id="功能說明">功能說明</h3>
+<p>股東可將投票權委託給另一位股東代為行使。委託後原股東無法自行投票，代理人可代替委託人投票。代理人投票後委託無法撤回。</p>
+<h3
+id="合約層srcgovernancevoting.sol">合約層（<code>src/GovernanceVoting.sol</code>）</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>函數</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>儲存委託關係的 mapping</td>
+<td><code>proxyOf</code></td>
+<td>第 129 行</td>
+</tr>
+<tr>
+<td>記錄代理人是否已投票</td>
+<td><code>proxyHasVoted</code></td>
+<td>第 130 行</td>
+</tr>
+<tr>
+<td>授予委託</td>
+<td><code>grantProxy(proposalId, proxy)</code></td>
+<td>第 298–306 行</td>
+</tr>
+<tr>
+<td>代理人代為投票</td>
+<td><code>voteOnBehalf(proposalId, delegator, forVotes, againstVotes, abstainVotes)</code></td>
+<td>第 309–323 行</td>
+</tr>
+<tr>
+<td>撤回委託（代理人未投票前）</td>
+<td><code>revokeProxy(proposalId)</code></td>
+<td>第 326–330 行</td>
+</tr>
+</tbody>
+</table>
+<p><strong>關鍵邏輯：</strong> - 第 304
+行：一個提案只能委託一次，<code>ProxyAlreadyGranted</code>
+錯誤防止重複委託 - 第 313 行：只有被委託的代理人才能呼叫
+<code>voteOnBehalf</code>，否則拋出 <code>NotAProxy</code> - 第 328
+行：代理人已投票後呼叫 <code>revokeProxy</code> 會拋出
+<code>CannotRevokeAfterProxyVoted</code></p>
+<h3 id="前端層">前端層</h3>
+<h4
+id="frontendcomponentsshareholderproxypanel.tsx委託操作面板"><code>frontend/components/shareholder/ProxyPanel.tsx</code>（委託操作面板）</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>讀取目前委託對象 <code>proxyOf</code></td>
+<td>第 18–24 行</td>
+</tr>
+<tr>
+<td>讀取代理人是否已投票 <code>proxyHasVoted</code></td>
+<td>第 26–33 行</td>
+</tr>
+<tr>
+<td>送出委託交易 <code>grantProxy</code></td>
+<td>第 35–43 行</td>
+</tr>
+<tr>
+<td>撤回委託交易 <code>revokeProxy</code></td>
+<td>第 45–51 行</td>
+</tr>
+<tr>
+<td>有委託時顯示「撤回委託」按鈕</td>
+<td>第 55–71 行</td>
+</tr>
+<tr>
+<td>代理人已投票後按鈕 <code>disabled</code></td>
+<td>第 62 行：<code>disabled={isPending \|\| !!voted}</code></td>
+</tr>
+<tr>
+<td>代理人已投票後顯示說明文字</td>
+<td>第 68 行</td>
+</tr>
+</tbody>
+</table>
+<h4
+id="frontendcomponentsshareholdervotepanel.tsx投票表單"><code>frontend/components/shareholder/VotePanel.tsx</code>（投票表單）</h4>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>讀取是否已授予委託 <code>proxyOf</code></td>
+<td>第 29–35 行</td>
+</tr>
+<tr>
+<td>計算是否存在有效委託</td>
+<td>第 36 行：<code>const hasProxy = ...</code></td>
+</tr>
+<tr>
+<td>已委託時隱藏投票表單</td>
+<td>第 53 行：<code>if (hasProxy) return null;</code></td>
+</tr>
+</tbody>
+</table>
+<h4
+id="frontendcomponentsshareholderproxyvotepanel.tsx代理投票面板"><code>frontend/components/shareholder/ProxyVotePanel.tsx</code>（代理投票面板）</h4>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>已知股東名單（用於反查委託）</td>
+<td>第 13–18 行</td>
+</tr>
+<tr>
+<td>批次查詢各股東的委託對象</td>
+<td>第 61–71 行</td>
+</tr>
+<tr>
+<td>篩選出委託給目前帳號的股東</td>
+<td>第 73–81 行</td>
+</tr>
+<tr>
+<td>每位委託人的代理投票表單元件</td>
+<td>第 22–65 行（<code>ProxyVoteForm</code>）</td>
+</tr>
+<tr>
+<td>讀取委託人快照持股數</td>
+<td>第 29–31 行</td>
+</tr>
+<tr>
+<td>送出 <code>voteOnBehalf</code> 交易</td>
+<td>第 39–49 行</td>
+</tr>
+<tr>
+<td>顯示委託人名稱與持股數</td>
+<td>第 53 行</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="二聯署提案cosign-proposal">二、聯署提案（Cosign Proposal）</h2>
+<h3 id="功能說明-1">功能說明</h3>
+<p>股東可發起「聯署提案」，需集滿 10
+位不同股東連署，且所有連署人合計持股達總股份 1%
+以上，提案才正式生效。連署截止日等同提案期截止日。</p>
+<h3
+id="合約層srcgovernancevoting.sol-1">合約層（<code>src/GovernanceVoting.sol</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>函數／欄位</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>提案結構中聯署截止日</td>
+<td><code>cosignDeadline</code></td>
+<td>第 45 行</td>
+</tr>
+<tr>
+<td>提案結構中連署人數</td>
+<td><code>cosignerCount</code></td>
+<td>第 46 行</td>
+</tr>
+<tr>
+<td>提案是否已生效</td>
+<td><code>isActive</code></td>
+<td>第 47 行</td>
+</tr>
+<tr>
+<td>記錄誰已連署的 mapping</td>
+<td><code>hasCosigned</code></td>
+<td>第 128 行</td>
+</tr>
+<tr>
+<td>連署人清單（私有）</td>
+<td><code>_cosignerList</code></td>
+<td>第 133 行</td>
+</tr>
+<tr>
+<td>建立聯署提案事件</td>
+<td><code>CosignProposalCreated</code></td>
+<td>第 93 行</td>
+</tr>
+<tr>
+<td>連署動作事件</td>
+<td><code>ProposalCosigned</code></td>
+<td>第 94 行</td>
+</tr>
+<tr>
+<td>執行連署</td>
+<td><code>cosign(proposalId)</code></td>
+<td>第 249–267 行</td>
+</tr>
+<tr>
+<td>達 10 人後提案生效</td>
+<td><code>isActive = true</code></td>
+<td>第 262 行</td>
+</tr>
+<tr>
+<td>連署截止日設定</td>
+<td><code>cosignDeadline = proposingDeadline</code></td>
+<td>第 238 行</td>
+</tr>
+<tr>
+<td>連署人持股合計需 ≥ 1% 驗證</td>
+<td><code>_checkCosignerBalance</code></td>
+<td>第 355–365 行</td>
+</tr>
+</tbody>
+</table>
+<p><strong>關鍵邏輯：</strong> - 第 252 行：連署截止後呼叫
+<code>cosign</code> 會拋出 <code>CosignDeadlinePassed</code> - 第 253
+行：同一人不能連署兩次，拋出 <code>AlreadyCosigned</code> - 第 260–263
+行：第 10 位連署人成功後，自動呼叫持股驗證並將 <code>isActive</code>
+設為 <code>true</code></p>
+<h3 id="前端層-1">前端層</h3>
+<h4
+id="frontendcomponentsshareholdercosignlist.tsx"><code>frontend/components/shareholder/CosignList.tsx</code></h4>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>讀取目前帳號是否已連署 <code>hasCosigned</code></td>
+<td>第 16–22 行</td>
+</tr>
+<tr>
+<td>讀取合約時間（用於判斷截止）</td>
+<td>第 24–30 行</td>
+</tr>
+<tr>
+<td>計算連署是否仍開放</td>
+<td>第 32 行：<code>const cosignOpen = ...</code></td>
+</tr>
+<tr>
+<td>送出連署交易 <code>cosign</code></td>
+<td>第 34–39 行</td>
+</tr>
+<tr>
+<td>顯示連署進度 X/10</td>
+<td>第 47 行</td>
+</tr>
+<tr>
+<td>顯示「我要聯署」按鈕條件</td>
+<td>第 49 行：未生效 且 未截止 且 未連署</td>
+</tr>
+<tr>
+<td>截止後未達門檻顯示失敗訊息</td>
+<td>第 54 行</td>
+</tr>
+<tr>
+<td>已達 10 人顯示生效訊息</td>
+<td>第 56 行</td>
+</tr>
+</tbody>
+</table>
+<h4
+id="frontendcomponentsshareholderproposallist.tsx整合顯示"><code>frontend/components/shareholder/ProposalList.tsx</code>（整合顯示）</h4>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>提案狀態顯示「聯署中 X/10」</td>
+<td>第 83 行</td>
+</tr>
+<tr>
+<td>條件渲染 <code>CosignList</code> 元件</td>
+<td>第 119
+行：<code>{proposal.isCosignProposal &amp;&amp; &lt;CosignList .../&gt;}</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="三時間快轉time-warp">三、時間快轉（Time Warp）</h2>
+<h3 id="功能說明-2">功能說明</h3>
+<p>為了 Demo
+方便，管理員可在合約層面快轉時間，模擬提案期、投票期截止等流程，而不需要真的等待數週。</p>
+<h3 id="合約層">合約層</h3>
+<p>兩個合約（<code>GovernanceVoting.sol</code>、<code>DirectorElection.sol</code>）都有相同的時間偏移機制：</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號（兩合約相同）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>儲存時間偏移量</td>
+<td><code>uint256 public timeOffset</code></td>
+</tr>
+<tr>
+<td>取得目前合約時間</td>
+<td><code>function _now()</code> →
+<code>block.timestamp + timeOffset</code></td>
+</tr>
+<tr>
+<td>對外查詢合約時間</td>
+<td><code>function currentTime()</code></td>
+</tr>
+<tr>
+<td>累加時間偏移（僅管理員）</td>
+<td><code>function addTimeOffset(uint256 secs)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>GovernanceVoting.sol</strong> 對應行號：第 119–123 行
+<strong>DirectorElection.sol</strong> 對應行號：第 86–90 行</p>
+<h3
+id="前端層frontendcomponentstimecontroller.tsx">前端層（<code>frontend/components/TimeController.tsx</code>）</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>讀取合約目前時間</td>
+<td>第 51–57 行</td>
+</tr>
+<tr>
+<td>本地網路（Anvil）快轉</td>
+<td>第 13–24 行：呼叫 <code>evm_increaseTime</code> +
+<code>evm_mine</code></td>
+</tr>
+<tr>
+<td>Sepolia 快轉</td>
+<td>第 68–79 行：呼叫兩個合約的 <code>addTimeOffset</code></td>
+</tr>
+<tr>
+<td>預設快轉按鈕（+1天 到 +60天）</td>
+<td>第 34–42 行</td>
+</tr>
+<tr>
+<td>自訂天數輸入</td>
+<td>第 90–94 行</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="四股東持股動態掃描">四、股東持股動態掃描</h2>
+<h3 id="功能說明-3">功能說明</h3>
+<p>持股總覽不再依賴硬寫的固定帳號清單，而是掃描鏈上
+<code>Transfer</code> 事件自動發現所有曾持股的地址。</p>
+<h3
+id="前端層frontendcomponentsadminshareholderregistry.tsx">前端層（<code>frontend/components/admin/ShareholderRegistry.tsx</code>）</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>已知帳號名稱對照表</td>
+<td>第 13–18 行</td>
+</tr>
+<tr>
+<td>Transfer 事件定義</td>
+<td>第 20–22 行：<code>parseAbiItem(...)</code></td>
+</tr>
+<tr>
+<td>掃描最近 50,000 個區塊的 Transfer 事件</td>
+<td>第 30–50 行</td>
+</tr>
+<tr>
+<td>合併事件地址與已知地址</td>
+<td>第 41–43 行</td>
+</tr>
+<tr>
+<td>掃描失敗時退回已知清單</td>
+<td>第 45–46 行</td>
+</tr>
+<tr>
+<td>批次讀取各地址餘額</td>
+<td>第 53–68 行</td>
+</tr>
+<tr>
+<td>過濾餘額為 0 的地址</td>
+<td>第 82 行：<code>.filter(r =&gt; r.balance &gt; 0n)</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="五提案列表排序">五、提案列表排序</h2>
+<h3 id="功能說明-4">功能說明</h3>
+<p>提案列表改為最新提案優先顯示（降序），方便快速查閱最新狀態。</p>
+<h3
+id="前端層frontendcomponentsshareholderproposallist.tsx">前端層（<code>frontend/components/shareholder/ProposalList.tsx</code>）</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>功能</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>降序渲染提案（最新在前）</td>
+<td>第 174
+行：<code>Array.from({ length: count }, (_, i) =&gt; count - 1 - i)</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2
+id="六投票狀態同步使用合約時間">六、投票狀態同步（使用合約時間）</h2>
+<h3 id="功能說明-5">功能說明</h3>
+<p>前端判斷「投票是否開放」時，改用合約的
+<code>currentTime()</code>（含時間偏移），確保快轉後 UI
+狀態與合約狀態一致。</p>
+<h3 id="前端層-2">前端層</h3>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 42%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>檔案</th>
+<th>修改說明</th>
+<th>行號</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ProposalList.tsx</code></td>
+<td>改用 <code>currentTime()</code> 讀合約時間</td>
+<td>第 32–38 行</td>
+</tr>
+<tr>
+<td><code>ProposalList.tsx</code></td>
+<td>用合約時間判斷 <code>votingOpen</code> /
+<code>canFinalize</code></td>
+<td>第 67–69 行</td>
+</tr>
+<tr>
+<td><code>CosignList.tsx</code></td>
+<td>改用 <code>currentTime()</code> 判斷聯署截止</td>
+<td>第 24–32 行</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

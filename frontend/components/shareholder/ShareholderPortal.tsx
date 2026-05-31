@@ -13,17 +13,22 @@ export function ShareholderPortal() {
   const [refreshSignal, setRefreshSignal] = useState(0);
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold">股東操作區</h2>
+    <section className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-[#0f2456]">股東操作區</h2>
+      </div>
+
       <StatusCard />
 
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-1 bg-white border border-border rounded-xl p-1 w-fit shadow-sm">
         {(["proposals", "election"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm border-b-2 transition-colors ${
-              tab === t ? "border-primary text-primary font-medium" : "border-transparent text-muted-foreground"
+            className={`px-5 py-2 text-sm rounded-lg font-medium transition-all ${
+              tab === t
+                ? "bg-[#0f2456] text-white shadow"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t === "proposals" ? "提案與投票" : "董事選舉"}
