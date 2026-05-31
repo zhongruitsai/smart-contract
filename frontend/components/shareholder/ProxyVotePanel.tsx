@@ -88,28 +88,35 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
 
   const scanDelegators = useCallback(async () => {
     if (!publicClient || !address) return;
+
+    // Start with known addresses as guaranteed baseline
+    const knownAddrs = Object.keys(KNOWN_NAMES).filter(
+      (a) => a !== address.toLowerCase()
+    );
+
+    // Also scan events to discover unknown accounts (best-effort)
+    let eventAddrs: string[] = [];
     try {
-      // Scan from block 0 so early delegations are never missed.
+      const latest    = await publicClient.getBlockNumber();
+      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
       const logs = await publicClient.getLogs({
         address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
         event:   PROXY_GRANTED_EVENT,
-        fromBlock: BigInt(0),
-        toBlock:   "latest",
+        fromBlock,
+        toBlock: "latest",
       });
-      const unique = [
-        ...new Set(
-          logs
-            .filter((l) =>
-              l.args.proposalId === proposal.id &&
-              (l.args.proxy as string).toLowerCase() === address.toLowerCase()
-            )
-            .map((l) => (l.args.delegator as string).toLowerCase())
-        ),
-      ];
-      setCandidates(unique);
+      eventAddrs = logs
+        .filter(
+          (l) =>
+            l.args.proposalId === proposal.id &&
+            (l.args.proxy as string).toLowerCase() === address.toLowerCase()
+        )
+        .map((l) => (l.args.delegator as string).toLowerCase());
     } catch (err) {
       console.error("掃描委託事件失敗", err);
     }
+
+    setCandidates([...new Set([...knownAddrs, ...eventAddrs])]);
   }, [publicClient, address, proposal.id]);
 
   useEffect(() => {
