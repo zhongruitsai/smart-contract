@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useReadContracts, usePublicClient } from "wagmi";
 import { formatUnits, parseAbiItem } from "viem";
-import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
+import { CONTRACT_ADDRESSES, CHAIN_ID, DEPLOY_BLOCK } from "@/lib/config";
 import { GOVERNANCE_TOKEN_ABI } from "@/lib/abis";
 
 const KNOWN_NAMES: Record<string, string> = {
@@ -25,24 +25,29 @@ export function ShareholderRegistry({ refreshSignal }: { refreshSignal?: number 
   const fetchHolders = useCallback(async () => {
     if (!publicClient) return;
     setScanning(true);
+    const CHUNK = BigInt(50000);
+    const found: string[] = [];
     try {
       const latest = await publicClient.getBlockNumber();
-      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
-      const logs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
-        event: TRANSFER_EVENT,
-        fromBlock,
-        toBlock: "latest",
-      });
-      const fromEvents = logs
-        .map((l) => (l.args.to as string).toLowerCase())
-        .filter((addr) => addr !== "0x0000000000000000000000000000000000000000");
-      const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...fromEvents])] as `0x${string}`[];
-      setHolders(merged);
+      const startBlock = DEPLOY_BLOCK[CHAIN_ID] ?? BigInt(0);
+      for (let from = startBlock; from <= latest; from += CHUNK) {
+        const to = from + CHUNK - 1n < latest ? from + CHUNK - 1n : latest;
+        const logs = await publicClient.getLogs({
+          address: CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+          event: TRANSFER_EVENT,
+          fromBlock: from,
+          toBlock: to,
+        });
+        logs
+          .map((l) => (l.args.to as string).toLowerCase())
+          .filter((addr) => addr !== "0x0000000000000000000000000000000000000000")
+          .forEach((addr) => found.push(addr));
+      }
     } catch (err) {
       console.error("掃描持股人失敗，退回已知清單", err);
-      setHolders(Object.keys(KNOWN_NAMES) as `0x${string}`[]);
     } finally {
+      const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...found])] as `0x${string}`[];
+      setHolders(merged);
       setScanning(false);
     }
   }, [publicClient]);
