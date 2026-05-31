@@ -73,9 +73,9 @@ contract DirectorElectionTest is Test {
     function _createElectionWithCandidates(uint256 seats) internal returns (uint256 electionId) {
         electionId = _createElection(seats);
         vm.startPrank(owner);
-        election.registerCandidate(electionId, cand1);
-        election.registerCandidate(electionId, cand2);
-        election.registerCandidate(electionId, cand3);
+        election.registerCandidate(electionId, cand1, "Test", "");
+        election.registerCandidate(electionId, cand2, "Test", "");
+        election.registerCandidate(electionId, cand3, "Test", "");
         vm.stopPrank();
     }
 
@@ -115,7 +115,7 @@ contract DirectorElectionTest is Test {
     function test_RegisterCandidate_Success() public {
         uint256 eid = _createElection(3);
         vm.prank(owner);
-        election.registerCandidate(eid, cand1);
+        election.registerCandidate(eid, cand1, "Test", "");
 
         address[] memory candidates = election.getCandidates(eid);
         assertEq(candidates.length, 1);
@@ -125,9 +125,9 @@ contract DirectorElectionTest is Test {
     function test_RevertWhen_RegisterCandidate_Duplicate() public {
         uint256 eid = _createElection(3);
         vm.startPrank(owner);
-        election.registerCandidate(eid, cand1);
+        election.registerCandidate(eid, cand1, "Test", "");
         vm.expectRevert(abi.encodeWithSelector(DirectorElection.CandidateAlreadyRegistered.selector, cand1, eid));
-        election.registerCandidate(eid, cand1);
+        election.registerCandidate(eid, cand1, "Test", "");
         vm.stopPrank();
     }
 

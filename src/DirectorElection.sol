@@ -79,6 +79,12 @@ contract DirectorElection is Ownable, ReentrancyGuard {
 
     GovernanceToken public immutable token;
 
+    /// @notice Display name for each candidate address (cross-election).
+    mapping(address => string) public candidateName;
+
+    /// @notice Photo URL for each candidate address (cross-election).
+    mapping(address => string) public candidatePhotoUrl;
+
     uint256 public nextElectionId;
     mapping(uint256 => Election) private _elections;
 
@@ -133,7 +139,12 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         emit ElectionCreated(electionId, meetingDate, seatCount, voteEnd, snapId);
     }
 
-    function registerCandidate(uint256 electionId, address candidate) external onlyOwner {
+    function registerCandidate(
+        uint256 electionId,
+        address candidate,
+        string calldata name,
+        string calldata photoUrl
+    ) external onlyOwner {
         if (candidate == address(0)) revert ZeroAddress();
         Election storage e = _requireElection(electionId);
         if (e.finalized) revert ElectionAlreadyFinalized(electionId);
@@ -141,8 +152,18 @@ contract DirectorElection is Ownable, ReentrancyGuard {
 
         e.isCandidateRegistered[candidate] = true;
         e.candidates.push(candidate);
+        candidateName[candidate]    = name;
+        candidatePhotoUrl[candidate] = photoUrl;
 
         emit CandidateRegistered(electionId, candidate);
+    }
+
+    /// @notice Update a candidate's display info without re-registering.
+    function setCandidateInfo(address candidate, string calldata name, string calldata photoUrl)
+        external onlyOwner
+    {
+        candidateName[candidate]    = name;
+        candidatePhotoUrl[candidate] = photoUrl;
     }
 
     // ─── Voting ───────────────────────────────────────────────────────────────

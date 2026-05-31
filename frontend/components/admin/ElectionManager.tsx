@@ -8,19 +8,7 @@ import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp } from "@/lib/utils";
-import { getProfile, setProfile, displayName } from "@/lib/candidateProfiles";
 import type { Election } from "@/types/governance";
-
-// ─── Candidate profile photo upload ──────────────────────────────────────────
-
-function toBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 // ─── Create Election Form ─────────────────────────────────────────────────────
 
@@ -104,18 +92,10 @@ function CreateElectionForm({ onCreated }: { onCreated: () => void }) {
 
 function RegisterCandidateForm({ electionId, onAdded }: { electionId: bigint; onAdded: () => void }) {
   const { writeContract, isPending } = useContractWrite();
-  const [addr, setAddr]   = useState("");
-  const [name, setName]   = useState("");
-  const [photo, setPhoto] = useState("");
-  const [open, setOpen]   = useState(false);
-
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("照片請勿超過 2MB"); return; }
-    const b64 = await toBase64(file);
-    setPhoto(b64);
-  }
+  const [addr, setAddr]         = useState("");
+  const [name, setName]         = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [open, setOpen]         = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,11 +106,10 @@ function RegisterCandidateForm({ electionId, onAdded }: { electionId: bigint; on
         address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
         abi: DIRECTOR_ELECTION_ABI,
         functionName: "registerCandidate",
-        args: [electionId, addr as `0x${string}`],
+        args: [electionId, addr as `0x${string}`, name.trim(), photoUrl.trim()],
       });
-      setProfile(addr, { name: name.trim(), photo });
       toast.success(`${name} 已登記為候選人`);
-      setAddr(""); setName(""); setPhoto(""); setOpen(false);
+      setAddr(""); setName(""); setPhotoUrl(""); setOpen(false);
       onAdded();
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
@@ -153,20 +132,16 @@ function RegisterCandidateForm({ electionId, onAdded }: { electionId: bigint; on
             className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
 
-        {/* Photo upload */}
+        {/* Photo URL */}
         <div className="flex items-center gap-3">
-          {photo ? (
-            <img src={photo} alt="預覽" className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
+          {photoUrl ? (
+            <img src={photoUrl} alt="預覽" className="w-14 h-14 rounded-full object-cover border-2 border-white shadow"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">無照片</div>
+            <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs shrink-0">無照片</div>
           )}
-          <label className="cursor-pointer px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-muted transition-colors">
-            上傳照片
-            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-          </label>
-          {photo && (
-            <button type="button" onClick={() => setPhoto("")} className="text-xs text-muted-foreground hover:text-destructive">移除</button>
-          )}
+          <input placeholder="照片網址（可留空）" value={photoUrl} onChange={e => setPhotoUrl(e.target.value)}
+            className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
 
         <div className="flex gap-2">
@@ -222,6 +197,28 @@ function ElectionAdminCard({ id }: { id: bigint }) {
       chainId: CHAIN_ID,
     })),
     query: { refetchInterval: 3000, enabled: candidates.length > 0 },
+  });
+
+  const { data: namesData } = useReadContracts({
+    contracts: candidates.map(c => ({
+      address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+      abi: DIRECTOR_ELECTION_ABI,
+      functionName: "candidateName" as const,
+      args: [c],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 5000, enabled: candidates.length > 0 },
+  });
+
+  const { data: photosData } = useReadContracts({
+    contracts: candidates.map(c => ({
+      address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+      abi: DIRECTOR_ELECTION_ABI,
+      functionName: "candidatePhotoUrl" as const,
+      args: [c],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 5000, enabled: candidates.length > 0 },
   });
 
   const handleFinalize = useCallback(async () => {
@@ -293,19 +290,20 @@ function ElectionAdminCard({ id }: { id: bigint }) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {candidates.map((addr, i) => {
-              const profile = getProfile(addr);
-              const votes = (votesData?.[i]?.result as bigint) ?? 0n;
+              const name     = (namesData?.[i]?.result as string) || "未設定";
+              const photoUrl = (photosData?.[i]?.result as string) || "";
+              const votes    = (votesData?.[i]?.result as bigint) ?? 0n;
               return (
                 <div key={addr} className="flex flex-col items-center gap-2 p-3 border border-border rounded-xl bg-gray-50 text-center">
-                  {profile.photo ? (
-                    <img src={profile.photo} alt={profile.name} className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
+                  {photoUrl ? (
+                    <img src={photoUrl} alt={name} className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
                   ) : (
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-xl font-bold text-white shadow">
-                      {profile.name?.[0] ?? "?"}
+                      {name[0] ?? "?"}
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-semibold">{profile.name || "未設定"}</p>
+                    <p className="text-sm font-semibold">{name}</p>
                     <p className="text-[10px] text-muted-foreground font-mono">{addr.slice(0,6)}…{addr.slice(-4)}</p>
                     <p className="text-xs text-[#0f2456] font-bold mt-1">{Number(formatUnits(votes, 18)).toLocaleString()} 票</p>
                   </div>

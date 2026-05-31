@@ -8,7 +8,6 @@ import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp } from "@/lib/utils";
-import { getProfile } from "@/lib/candidateProfiles";
 import type { Election } from "@/types/governance";
 
 function ElectionCard({ id }: { id: bigint }) {
@@ -54,6 +53,28 @@ function ElectionCard({ id }: { id: bigint }) {
       chainId: CHAIN_ID,
     })),
     query: { refetchInterval: 3000, enabled: candidates.length > 0 },
+  });
+
+  const { data: namesData } = useReadContracts({
+    contracts: candidates.map(c => ({
+      address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+      abi: DIRECTOR_ELECTION_ABI,
+      functionName: "candidateName" as const,
+      args: [c],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 5000, enabled: candidates.length > 0 },
+  });
+
+  const { data: photosData } = useReadContracts({
+    contracts: candidates.map(c => ({
+      address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+      abi: DIRECTOR_ELECTION_ABI,
+      functionName: "candidatePhotoUrl" as const,
+      args: [c],
+      chainId: CHAIN_ID,
+    })),
+    query: { refetchInterval: 5000, enabled: candidates.length > 0 },
   });
 
   if (!electionRaw) return null;
@@ -125,22 +146,23 @@ function ElectionCard({ id }: { id: bigint }) {
           <form onSubmit={castVotes} className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {candidates.map((addr, i) => {
-                const profile = getProfile(addr);
-                const votes = (votesData?.[i]?.result as bigint) ?? 0n;
+                const name     = (namesData?.[i]?.result as string) || "候選人";
+              const photoUrl = (photosData?.[i]?.result as string) || "";
+              const votes    = (votesData?.[i]?.result as bigint) ?? 0n;
                 const maxV = totalVotes > 0n ? totalVotes : 1n;
                 const pct = Number((votes * 100n) / maxV);
 
                 return (
                   <div key={addr} className="flex flex-col items-center gap-2 p-3 border border-border rounded-xl bg-gray-50 text-center">
-                    {profile.photo ? (
-                      <img src={profile.photo} alt={profile.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow" />
+                    {photoUrl ? (
+                      <img src={photoUrl} alt={name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow" />
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-2xl font-bold text-white shadow">
-                        {profile.name?.[0] ?? "?"}
+                        {name[0] ?? "?"}
                       </div>
                     )}
                     <div className="w-full">
-                      <p className="text-sm font-semibold leading-tight">{profile.name || "候選人"}</p>
+                      <p className="text-sm font-semibold leading-tight">{name}</p>
                       <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{addr.slice(0,6)}…{addr.slice(-4)}</p>
                       {totalVotes > 0n && (
                         <div className="mt-1.5">
