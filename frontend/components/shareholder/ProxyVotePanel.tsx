@@ -73,7 +73,7 @@ function ProxyVoteForm({ proposal, delegator }: { proposal: Proposal; delegator:
           <input type="number" min={0} placeholder="反對" value={againstV} onChange={(e) => setAgainstV(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
           <input type="number" min={0} placeholder="棄權" value={abstainV} onChange={(e) => setAbstainV(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
         </div>
-        <button type="submit" disabled={isPending} className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-sm disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={isPending || (!forV && !againstV && !abstainV)} className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-sm disabled:opacity-50 transition-colors">
           {isPending ? "送出中…" : `代 ${name} 投票`}
         </button>
       </form>
