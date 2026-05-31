@@ -95,7 +95,6 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
     if (!publicClient || !address) return;
 
     const CHUNK = BigInt(50000);
-    const found: string[] = [];
     try {
       const latest = await publicClient.getBlockNumber();
       for (let from = BigInt(0); from <= latest; from += CHUNK) {
@@ -106,24 +105,22 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
           fromBlock: from,
           toBlock:   to,
         });
-        logs
+        const found = logs
           .filter(
             (l) =>
               l.args.proposalId === proposal.id &&
               (l.args.proxy as string).toLowerCase() === address.toLowerCase()
           )
-          .forEach((l) => found.push((l.args.delegator as string).toLowerCase()));
+          .map((l) => (l.args.delegator as string).toLowerCase());
+
+        // Update after every chunk so new delegators appear immediately
+        if (found.length > 0) {
+          setExtraCandidates((prev) => [...new Set([...prev, ...found])]);
+        }
       }
     } catch (err) {
       console.error("掃描委託事件失敗", err);
     }
-
-    setExtraCandidates((prev) => {
-      const merged = [...new Set([...prev, ...found])];
-      return merged.length === prev.length && merged.every((v, i) => v === prev[i])
-        ? prev
-        : merged;
-    });
   }, [publicClient, address, proposal.id]);
 
   useEffect(() => {
