@@ -359,26 +359,6 @@ function ElectionAdminCard({ id }: { id: bigint }) {
                       )
                     )}
                   </div>
-                  {!election.finalized && editingAddr !== addr && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          await removeCandidate({
-                            address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
-                            abi: DIRECTOR_ELECTION_ABI,
-                            functionName: "removeCandidate",
-                            args: [id, addr],
-                          });
-                          toast.success("候選人已移除");
-                          setRefresh(r => r + 1);
-                        } catch (err) { toast.error(extractRevertReason(err)); }
-                      }}
-                      disabled={removing}
-                      className="text-[10px] text-red-400 hover:text-red-600 transition-colors mt-1 disabled:opacity-50"
-                    >
-                      {removing ? "移除中…" : "移除"}
-                    </button>
-                  )}
                 </div>
               );
             })}
