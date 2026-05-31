@@ -9,7 +9,6 @@ import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp } from "@/lib/utils";
 import type { Election } from "@/types/governance";
-import { ElectionProxyPanel, ElectionProxyVotePanel } from "./ElectionProxyPanel";
 
 function ElectionCard({ id }: { id: bigint }) {
   const { address } = useAccount();
@@ -208,12 +207,6 @@ function ElectionCard({ id }: { id: bigint }) {
           </form>
         )}
 
-        {votingOpen && (
-          <div className="space-y-2 border-t pt-3 mt-1">
-            <ElectionProxyPanel election={election} />
-            <ElectionProxyVotePanel election={election} candidates={candidates} />
-          </div>
-        )}
       </div>
     </div>
   );
