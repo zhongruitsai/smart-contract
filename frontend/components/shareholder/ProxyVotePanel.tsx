@@ -86,26 +86,31 @@ export function ProxyVotePanel({ proposal }: { proposal: Proposal }) {
   const publicClient = usePublicClient({ chainId: CHAIN_ID });
   const [holders, setHolders] = useState<string[]>(Object.keys(KNOWN_NAMES));
 
-  // Discover all token holders via Transfer events, merged with KNOWN_NAMES
+  // Discover all token holders via Transfer events (chunked from block 0)
   const fetchHolders = useCallback(async () => {
     if (!publicClient) return;
+    const CHUNK = BigInt(50000);
+    const found: string[] = [];
     try {
-      const latest    = await publicClient.getBlockNumber();
-      const fromBlock = latest > BigInt(50000) ? latest - BigInt(50000) : BigInt(0);
-      const logs = await publicClient.getLogs({
-        address:   CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
-        event:     TRANSFER_EVENT,
-        fromBlock,
-        toBlock:   "latest",
-      });
-      const fromEvents = logs
-        .map((l) => (l.args.to as string).toLowerCase())
-        .filter((a) => a !== "0x0000000000000000000000000000000000000000");
-      const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...fromEvents])];
-      setHolders(merged);
+      const latest = await publicClient.getBlockNumber();
+      for (let from = BigInt(0); from <= latest; from += CHUNK) {
+        const to = from + CHUNK - BigInt(1) < latest ? from + CHUNK - BigInt(1) : latest;
+        const logs = await publicClient.getLogs({
+          address:   CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+          event:     TRANSFER_EVENT,
+          fromBlock: from,
+          toBlock:   to,
+        });
+        logs
+          .map((l) => (l.args.to as string).toLowerCase())
+          .filter((a) => a !== "0x0000000000000000000000000000000000000000")
+          .forEach((a) => found.push(a));
+      }
     } catch {
-      // fallback: keep KNOWN_NAMES already in state
+      // fallback: keep current state
     }
+    const merged = [...new Set([...Object.keys(KNOWN_NAMES), ...found])];
+    setHolders(merged);
   }, [publicClient]);
 
   useEffect(() => {
