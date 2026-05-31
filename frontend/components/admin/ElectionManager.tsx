@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useReadContract, useReadContracts, usePublicClient } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
 import { toast } from "sonner";
@@ -200,14 +200,16 @@ function ElectionAdminCard({ id }: { id: bigint }) {
     query: { refetchInterval: 3000 },
   });
 
-  const { data: candidatesRaw } = useReadContract({
+  const { data: candidatesRaw, refetch: refetchCandidates } = useReadContract({
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "getCandidates",
     args: [id],
     chainId: CHAIN_ID,
-    query: { refetchInterval: 3000, queryKey: [refresh] },
+    query: { refetchInterval: 3000 },
   });
+
+  useEffect(() => { if (refresh > 0) refetchCandidates(); }, [refresh, refetchCandidates]);
 
   const candidates = (candidatesRaw ?? []) as `0x${string}`[];
 
@@ -329,13 +331,15 @@ function ElectionAdminCard({ id }: { id: bigint }) {
 export function ElectionManager() {
   const [refresh, setRefresh] = useState(0);
 
-  const { data: nextId } = useReadContract({
+  const { data: nextId, refetch: refetchNextId } = useReadContract({
     address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
     abi: DIRECTOR_ELECTION_ABI,
     functionName: "nextElectionId",
     chainId: CHAIN_ID,
-    query: { refetchInterval: 3000, queryKey: [refresh] },
+    query: { refetchInterval: 3000 },
   });
+
+  useEffect(() => { if (refresh > 0) refetchNextId(); }, [refresh, refetchNextId]);
 
   const count = nextId ? Number(nextId) : 0;
 
