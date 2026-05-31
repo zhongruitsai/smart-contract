@@ -118,8 +118,8 @@ contract GovernanceVoting is Ownable, ReentrancyGuard {
     /// @notice Admin-controlled time offset for demo/testing purposes.
     uint256 public timeOffset;
 
-    function _now() internal view returns (uint256) { return _now() + timeOffset; }
-    function currentTime() external view returns (uint256) { return _now() + timeOffset; }
+    function _now() internal view returns (uint256) { return block.timestamp + timeOffset; }
+    function currentTime() external view returns (uint256) { return block.timestamp + timeOffset; }
     function addTimeOffset(uint256 secs) external onlyOwner { timeOffset += secs; }
 
     mapping(uint256 => Proposal) public proposals;
