@@ -161,51 +161,9 @@ function RegisterCandidateForm({ electionId, onAdded }: { electionId: bigint; on
 
 // ─── Single Election Admin Card ───────────────────────────────────────────────
 
-function EditCandidateForm({ addr, onDone }: { addr: string; onDone: () => void }) {
-  const { writeContract, isPending } = useContractWrite();
-  const [name, setName]         = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { toast.error("請填寫姓名"); return; }
-    try {
-      await writeContract({
-        address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
-        abi: DIRECTOR_ELECTION_ABI,
-        functionName: "setCandidateInfo",
-        args: [addr as `0x${string}`, name.trim(), photoUrl.trim()],
-      });
-      toast.success("候選人資料已更新");
-      onDone();
-    } catch (err) { toast.error(extractRevertReason(err)); }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-2 space-y-2 border-t border-border pt-2">
-      <input placeholder="姓名" value={name} onChange={e => setName(e.target.value)}
-        className="w-full px-2 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
-      <input placeholder="照片網址（可留空）" value={photoUrl} onChange={e => setPhotoUrl(e.target.value)}
-        className="w-full px-2 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
-      <div className="flex gap-1.5">
-        <button type="submit" disabled={isPending}
-          className="px-3 py-1 bg-[#0f2456] text-white rounded text-xs disabled:opacity-50">
-          {isPending ? "儲存中…" : "儲存"}
-        </button>
-        <button type="button" onClick={onDone}
-          className="px-3 py-1 border border-border rounded text-xs hover:bg-muted">
-          取消
-        </button>
-      </div>
-    </form>
-  );
-}
-
 function ElectionAdminCard({ id }: { id: bigint }) {
   const publicClient = usePublicClient({ chainId: CHAIN_ID });
   const { writeContract, isPending: finalizing } = useContractWrite();
-  const { writeContract: removeCandidate, isPending: removing } = useContractWrite();
-  const [editingAddr, setEditingAddr] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   const { data: electionRaw } = useReadContract({
@@ -344,20 +302,10 @@ function ElectionAdminCard({ id }: { id: bigint }) {
                       {name[0] ?? "?"}
                     </div>
                   )}
-                  <div className="w-full">
+                  <div>
                     <p className="text-sm font-semibold">{name}</p>
                     <p className="text-[10px] text-muted-foreground font-mono">{addr.slice(0,6)}…{addr.slice(-4)}</p>
                     <p className="text-xs text-[#0f2456] font-bold mt-1">{Number(formatUnits(votes, 18)).toLocaleString()} 票</p>
-                    {editingAddr === addr ? (
-                      <EditCandidateForm addr={addr} onDone={() => setEditingAddr(null)} />
-                    ) : (
-                      !election.finalized && (
-                        <button onClick={() => setEditingAddr(addr)}
-                          className="text-[10px] text-blue-500 hover:text-blue-700 mt-1 transition-colors">
-                          編輯
-                        </button>
-                      )
-                    )}
                   </div>
                 </div>
               );

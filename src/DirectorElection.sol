@@ -48,6 +48,10 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     error ZeroSeats();
     error ZeroAddress();
     error CandidateArrayInvalid();
+    error ProxyAlreadyGranted(address delegator);
+    error AlreadyGrantedProxy(address delegator);
+    error NotAProxy(address caller, address delegator, uint256 electionId);
+    error ProxyAlreadyVoted(uint256 electionId, address delegator);
 
     // ─── Events ───────────────────────────────────────────────────────────────
 
@@ -55,6 +59,8 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     event CandidateRegistered(uint256 indexed electionId, address indexed candidate);
     event VotesCast(uint256 indexed electionId, address indexed voter, uint256 totalVotesCast);
     event ElectionFinalized(uint256 indexed electionId, address[] electedDirectors, uint256[] votes);
+    event ProxyGranted(uint256 indexed electionId, address indexed delegator, address indexed proxy);
+    event VotesCastOnBehalf(uint256 indexed electionId, address indexed proxy, address indexed delegator, uint256 totalVotesCast);
 
     // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -78,6 +84,9 @@ contract DirectorElection is Ownable, ReentrancyGuard {
     // ─── State ────────────────────────────────────────────────────────────────
 
     GovernanceToken public immutable token;
+
+    mapping(uint256 => mapping(address => address)) public proxyOf;
+    mapping(uint256 => mapping(address => bool))    public proxyHasVoted;
 
     /// @notice Display name for each candidate address (cross-election).
     mapping(address => string) public candidateName;
@@ -206,6 +215,7 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         Election storage e = _requireElection(electionId);
         if (_now() > e.voteEnd) revert VotingEnded(electionId);
         if (e.hasVoted[msg.sender]) revert AlreadyVoted(msg.sender);
+        if (proxyOf[electionId][msg.sender] != address(0)) revert AlreadyGrantedProxy(msg.sender);
 
         uint256 snapBal = token.balanceOfAt(msg.sender, e.snapshotId);
         uint256 maxVotes = snapBal * e.seatCount;
@@ -227,6 +237,52 @@ contract DirectorElection is Ownable, ReentrancyGuard {
         e.hasVoted[msg.sender] = true;
 
         emit VotesCast(electionId, msg.sender, totalCast);
+    }
+
+    // ─── Proxy Voting ─────────────────────────────────────────────────────────
+
+    function grantProxy(uint256 electionId, address proxy) external nonReentrant {
+        if (proxy == address(0)) revert ZeroAddress();
+        Election storage e = _requireElection(electionId);
+        if (_now() > e.voteEnd) revert VotingEnded(electionId);
+        if (e.hasVoted[msg.sender]) revert AlreadyVoted(msg.sender);
+        if (proxyOf[electionId][msg.sender] != address(0)) revert ProxyAlreadyGranted(msg.sender);
+        proxyOf[electionId][msg.sender] = proxy;
+        emit ProxyGranted(electionId, msg.sender, proxy);
+    }
+
+    function voteOnBehalf(
+        uint256 electionId,
+        address delegator,
+        address[] calldata candidates_,
+        uint256[] calldata votes_
+    ) external nonReentrant {
+        if (candidates_.length != votes_.length) revert ArrayLengthMismatch();
+        if (candidates_.length == 0) revert CandidateArrayInvalid();
+
+        Election storage e = _requireElection(electionId);
+        if (proxyOf[electionId][delegator] != msg.sender) revert NotAProxy(msg.sender, delegator, electionId);
+        if (proxyHasVoted[electionId][delegator]) revert ProxyAlreadyVoted(electionId, delegator);
+        if (_now() > e.voteEnd) revert VotingEnded(electionId);
+
+        uint256 snapBal  = token.balanceOfAt(delegator, e.snapshotId);
+        uint256 maxVotes = snapBal * e.seatCount;
+
+        uint256 totalCast;
+        for (uint256 i = 0; i < candidates_.length; ) {
+            if (!e.isCandidateRegistered[candidates_[i]])
+                revert CandidateNotRegistered(candidates_[i], electionId);
+            totalCast += votes_[i];
+            unchecked { ++i; }
+        }
+        if (totalCast > maxVotes) revert VotesExceedMaximum(totalCast, maxVotes);
+
+        for (uint256 i = 0; i < candidates_.length; ) {
+            e.candidateVotes[candidates_[i]] += votes_[i];
+            unchecked { ++i; }
+        }
+        proxyHasVoted[electionId][delegator] = true;
+        emit VotesCastOnBehalf(electionId, msg.sender, delegator, totalCast);
     }
 
     // ─── Finalization ─────────────────────────────────────────────────────────
