@@ -23,15 +23,6 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
     chainId: CHAIN_ID,
   });
 
-  const { data: proxyVoted } = useReadContract({
-    address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING,
-    abi: GOVERNANCE_VOTING_ABI,
-    functionName: "proxyHasVoted",
-    args: [proposal.id, address ?? "0x0000000000000000000000000000000000000000"],
-    chainId: CHAIN_ID,
-    query: { refetchInterval: 3000 },
-  });
-
   async function grantProxy(e: React.FormEvent) {
     e.preventDefault();
     if (!proxyAddr.startsWith("0x")) { toast.error("地址格式錯誤"); return; }
@@ -42,31 +33,13 @@ export function ProxyPanel({ proposal }: { proposal: Proposal }) {
     } catch (err) { toast.error(extractRevertReason(err)); }
   }
 
-  async function revokeProxy() {
-    try {
-      await writeContract({ address: CONTRACT_ADDRESSES.GOVERNANCE_VOTING, abi: GOVERNANCE_VOTING_ABI, functionName: "revokeProxy", args: [proposal.id] });
-      toast.success("委託已撤回");
-      refetchProxy();
-    } catch (err) { toast.error(extractRevertReason(err)); }
-  }
-
   const hasProxy = currentProxy && currentProxy !== "0x0000000000000000000000000000000000000000";
 
   if (hasProxy) {
-    const voted = proxyVoted as boolean | undefined;
     return (
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">已委託：<span className="font-mono">{formatAddress(currentProxy as string)}</span></p>
-        <button
-          onClick={revokeProxy}
-          disabled={isPending || !!voted}
-          title={voted ? "代理人已完成投票，無法撤回" : undefined}
-          className="px-3 py-1.5 border border-destructive text-destructive rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPending ? "…" : "撤回委託"}
-        </button>
-        {voted && <p className="text-xs text-muted-foreground">代理人已完成投票，無法撤回委託。</p>}
-      </div>
+      <p className="text-xs text-muted-foreground">
+        已委託：<span className="font-mono">{formatAddress(currentProxy as string)}</span>
+      </p>
     );
   }
 
