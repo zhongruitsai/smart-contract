@@ -56,7 +56,16 @@ export function TimeController() {
     query: { refetchInterval: 3000 },
   });
 
+  const { data: electionTime, refetch: refetchElection } = useReadContract({
+    address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+    abi: DIRECTOR_ELECTION_ABI,
+    functionName: "currentTime",
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
+
   const blockTime = tsToLocal(currentTime as bigint | undefined);
+  const electionTimeStr = tsToLocal(electionTime as bigint | undefined);
 
   async function handleWarp(seconds: number) {
     try {
@@ -94,6 +103,26 @@ export function TimeController() {
     setCustom("");
   }
 
+  async function handleSyncElection() {
+    const govTs = currentTime as bigint | undefined;
+    const elecTs = electionTime as bigint | undefined;
+    if (!govTs || !elecTs) { toast.error("時間讀取中，請稍後"); return; }
+    const diff = govTs - elecTs;
+    if (diff <= 0n) { toast.success("董事選舉時間已同步"); return; }
+    try {
+      await writeContract({
+        address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+        abi: DIRECTOR_ELECTION_ABI,
+        functionName: "addTimeOffset",
+        args: [diff],
+      });
+      await refetchElection();
+      toast.success(`已同步董事選舉時間（+${Math.round(Number(diff) / 86400)} 天）`);
+    } catch (err) {
+      toast.error(extractRevertReason(err));
+    }
+  }
+
   const loading = isPending || localLoading;
 
   return (
@@ -103,8 +132,27 @@ export function TimeController() {
         <button onClick={() => refetch()} className="text-xs text-amber-600 hover:underline">重新整理</button>
       </div>
 
-      <div className="font-mono text-sm bg-white rounded px-3 py-2 border border-amber-200">
-        {blockTime}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-amber-700">提案投票</span>
+          <span className="font-mono text-sm bg-white rounded px-3 py-1 border border-amber-200">{blockTime}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-amber-700">董事選舉</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm bg-white rounded px-3 py-1 border border-amber-200">{electionTimeStr}</span>
+            {(currentTime as bigint | undefined) && (electionTime as bigint | undefined) &&
+              (currentTime as bigint) > (electionTime as bigint) && (
+              <button
+                onClick={handleSyncElection}
+                disabled={loading}
+                className="px-2.5 py-1 text-xs rounded bg-red-100 hover:bg-red-200 text-red-800 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                同步時間
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>
