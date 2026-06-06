@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useReadContract, useReadContracts, useAccount } from "wagmi";
 import { toast } from "sonner";
 import { parseUnits, formatUnits } from "viem";
@@ -102,6 +102,14 @@ function ElectionCard({ id }: { id: bigint }) {
   const votingOpen = now <= election.voteEnd && !election.finalized;
   const totalVotes = (votesData ?? []).reduce((s, v) => s + ((v?.result as bigint) ?? 0n), 0n);
 
+  const electedSet = useMemo(() => {
+    if (!election.finalized || candidates.length === 0) return new Set<string>();
+    const sorted = candidates
+      .map((addr, i) => ({ addr, votes: (votesData?.[i]?.result as bigint) ?? 0n }))
+      .sort((a, b) => (b.votes > a.votes ? 1 : b.votes < a.votes ? -1 : 0));
+    return new Set(sorted.slice(0, Number(election.seatCount)).map(x => x.addr));
+  }, [election.finalized, election.seatCount, candidates, votesData]);
+
   async function castVotes(e: React.FormEvent) {
     e.preventDefault();
     const addrs = candidates.filter(c => voteInputs[c] && Number(voteInputs[c]) > 0);
@@ -146,6 +154,28 @@ function ElectionCard({ id }: { id: bigint }) {
         )}
       </div>
 
+      {/* Elected result banner */}
+      {election.finalized && electedSet.size > 0 && (
+        <div className="px-5 py-3 bg-yellow-50 border-b border-yellow-200 flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-yellow-800">本屆當選董事</span>
+          {candidates
+            .filter(addr => electedSet.has(addr))
+            .map((addr) => {
+              const name = (namesData?.[candidates.indexOf(addr)]?.result as string) || addr.slice(0,6) + "…" + addr.slice(-4);
+              const photoUrl = (photosData?.[candidates.indexOf(addr)]?.result as string) || "";
+              return (
+                <div key={addr} className="flex items-center gap-1.5">
+                  {photoUrl
+                    ? <img src={photoUrl} alt={name} className="w-6 h-6 rounded-full object-cover border border-yellow-400" />
+                    : <div className="w-6 h-6 rounded-full bg-yellow-300 flex items-center justify-center text-xs font-bold text-yellow-900">{name[0]}</div>
+                  }
+                  <span className="text-sm font-semibold text-yellow-900">{name}</span>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
       {/* Candidates */}
       <div className="px-5 py-4">
         {candidates.length === 0 ? (
@@ -155,15 +185,25 @@ function ElectionCard({ id }: { id: bigint }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {candidates.map((addr, i) => {
                 const name     = (namesData?.[i]?.result as string) || "候選人";
-              const photoUrl = (photosData?.[i]?.result as string) || "";
-              const votes    = (votesData?.[i]?.result as bigint) ?? 0n;
+                const photoUrl = (photosData?.[i]?.result as string) || "";
+                const votes    = (votesData?.[i]?.result as bigint) ?? 0n;
                 const maxV = totalVotes > 0n ? totalVotes : 1n;
                 const pct = Number((votes * 100n) / maxV);
+                const isElected = electedSet.has(addr);
 
                 return (
-                  <div key={addr} className="flex flex-col items-center gap-2 p-3 border border-border rounded-xl bg-gray-50 text-center">
+                  <div key={addr} className={`relative flex flex-col items-center gap-2 p-3 border rounded-xl text-center transition-all ${
+                    isElected
+                      ? "border-yellow-400 bg-yellow-50 shadow-md"
+                      : "border-border bg-gray-50"
+                  }`}>
+                    {isElected && (
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                        當選董事
+                      </span>
+                    )}
                     {photoUrl ? (
-                      <img src={photoUrl} alt={name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow" />
+                      <img src={photoUrl} alt={name} className={`w-16 h-16 rounded-full object-cover shadow ${isElected ? "border-2 border-yellow-400" : "border-2 border-white"}`} />
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-2xl font-bold text-white shadow">
                         {name[0] ?? "?"}
@@ -175,7 +215,7 @@ function ElectionCard({ id }: { id: bigint }) {
                       {totalVotes > 0n && (
                         <div className="mt-1.5">
                           <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                            <div className="h-full bg-[#0f2456] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            <div className={`h-full rounded-full transition-all ${isElected ? "bg-yellow-500" : "bg-[#0f2456]"}`} style={{ width: `${pct}%` }} />
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {Number(formatUnits(votes, 18)).toLocaleString()} 票（{pct}%）
