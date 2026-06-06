@@ -42,6 +42,14 @@ function ElectionCard({ id }: { id: bigint }) {
     query: { refetchInterval: 3000 },
   });
 
+  const { data: contractTime } = useReadContract({
+    address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+    abi: DIRECTOR_ELECTION_ABI,
+    functionName: "currentTime",
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
+
   const candidates = (candidatesRaw ?? []) as `0x${string}`[];
 
   const { data: votesData } = useReadContracts({
@@ -90,7 +98,7 @@ function ElectionCard({ id }: { id: bigint }) {
     candidateCount: raw[6] as bigint,
   };
 
-  const now = BigInt(Math.floor(Date.now() / 1000));
+  const now = (contractTime as bigint | undefined) ?? BigInt(Math.floor(Date.now() / 1000));
   const votingOpen = now <= election.voteEnd && !election.finalized;
   const totalVotes = (votesData ?? []).reduce((s, v) => s + ((v?.result as bigint) ?? 0n), 0n);
 

@@ -221,6 +221,14 @@ function ElectionAdminCard({ id }: { id: bigint }) {
     query: { refetchInterval: 5000, enabled: candidates.length > 0 },
   });
 
+  const { data: contractTime } = useReadContract({
+    address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+    abi: DIRECTOR_ELECTION_ABI,
+    functionName: "currentTime",
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
+
   const handleFinalize = useCallback(async () => {
     if (!publicClient || candidates.length === 0) return;
     try {
@@ -250,7 +258,7 @@ function ElectionAdminCard({ id }: { id: bigint }) {
     candidateCount: raw[6] as bigint,
   };
 
-  const now = BigInt(Math.floor(Date.now() / 1000));
+  const now = (contractTime as bigint | undefined) ?? BigInt(Math.floor(Date.now() / 1000));
   const votingEnded = now > election.voteEnd;
   const canFinalize = votingEnded && !election.finalized && candidates.length > 0;
 
