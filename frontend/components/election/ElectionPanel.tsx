@@ -8,6 +8,7 @@ import { useContractWrite } from "@/hooks/useContractWrite";
 import { CONTRACT_ADDRESSES, CHAIN_ID } from "@/lib/config";
 import { DIRECTOR_ELECTION_ABI } from "@/lib/abis";
 import { extractRevertReason, formatTimestamp } from "@/lib/utils";
+import { ElectionProxyPanel, ElectionProxyVotePanel } from "./ElectionProxyPanel";
 import type { Election } from "@/types/governance";
 
 function ElectionCard({ id }: { id: bigint }) {
@@ -49,6 +50,16 @@ function ElectionCard({ id }: { id: bigint }) {
     chainId: CHAIN_ID,
     query: { refetchInterval: 3000 },
   });
+
+  const { data: grantedProxy } = useReadContract({
+    address: CONTRACT_ADDRESSES.DIRECTOR_ELECTION,
+    abi: DIRECTOR_ELECTION_ABI,
+    functionName: "proxyOf",
+    args: [id, address ?? "0x0000000000000000000000000000000000000000"],
+    chainId: CHAIN_ID,
+    query: { refetchInterval: 3000 },
+  });
+  const hasGrantedProxy = !!grantedProxy && grantedProxy !== "0x0000000000000000000000000000000000000000";
 
   const candidates = (candidatesRaw ?? []) as `0x${string}`[];
 
@@ -223,7 +234,7 @@ function ElectionCard({ id }: { id: bigint }) {
                         </div>
                       )}
                     </div>
-                    {votingOpen && !hasVoted && (
+                    {votingOpen && !hasVoted && !hasGrantedProxy && (
                       <input
                         type="number"
                         placeholder="分配票數"
@@ -238,7 +249,7 @@ function ElectionCard({ id }: { id: bigint }) {
               })}
             </div>
 
-            {votingOpen && !hasVoted && (
+            {votingOpen && !hasVoted && !hasGrantedProxy && (
               <div className="flex items-center gap-3 pt-1">
                 <button type="submit" disabled={isPending}
                   className="px-5 py-2 bg-[#0f2456] text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-[#1a3570] transition-colors">
@@ -251,6 +262,19 @@ function ElectionCard({ id }: { id: bigint }) {
             )}
             {hasVoted && (
               <p className="text-sm text-emerald-600 font-medium">您已完成本次選舉投票。</p>
+            )}
+
+            {/* 委託投票區（投票中且本人尚未自行投票） */}
+            {votingOpen && !hasVoted && (
+              <div className="border-t border-border pt-3 mt-1 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">委託投票</p>
+                <ElectionProxyPanel election={election} />
+              </div>
+            )}
+
+            {/* 代理投票區（自動偵測是否有人委託給我） */}
+            {votingOpen && (
+              <ElectionProxyVotePanel election={election} candidates={candidates} />
             )}
           </form>
         )}
